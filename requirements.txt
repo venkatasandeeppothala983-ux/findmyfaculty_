@@ -1,0 +1,2 @@
+# FindMyFaculty uses pure Python 3 Standard Library (http.server + sqlite3)
+# Zero external dependencies required.

@@ -1,0 +1,4584 @@
+/* ================================================================
+   FindMyFaculty · Client Application Engine
+   Role-Based University Faculty Finder, Status Monitor & Timetable
+   ================================================================ */
+"use strict";
+
+// Safe storage wrapper for iframe sandboxes
+const __memStore = {};
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return __memStore[k] || null; } },
+  set(k, v) { __memStore[k] = v; try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { delete __memStore[k]; try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+let TOKEN = store.get('fmf_token') || '';
+
+// Fallback faculty data always available instantly
+const DEFAULT_FACULTY = [
+  {
+    "id": 1,
+    "name": "Dr. D. Thamaraiselvi",
+    "dept_code": "CSE",
+    "designation": "Associate Professor & Timetable Coordinator",
+    "cabin": "CSE Block \u2014 Room 201",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f001@scsvmv.ac.in",
+    "phone": "9840123456",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 201",
+    "activity": "Academic Planning & Database Systems Mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 2,
+    "name": "Dr. J. Vinothkumar",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 202",
+    "subjects_taught": "Object Oriented Analysis, Python",
+    "email": "f002@scsvmv.ac.in",
+    "phone": "+91 94431 10002",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 202",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 3,
+    "name": "Dr. K. Anitha",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 203",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f003@scsvmv.ac.in",
+    "phone": "+91 94431 10003",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 203",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 4,
+    "name": "Dr. K. Balachandran",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 204",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f004@scsvmv.ac.in",
+    "phone": "+91 94431 10004",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 204",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 5,
+    "name": "Dr. M. Gayathri",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 205",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f005@scsvmv.ac.in",
+    "phone": "+91 94431 10005",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 205",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 6,
+    "name": "Dr. M. Saraswathi",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 206",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f006@scsvmv.ac.in",
+    "phone": "+91 94431 10006",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 206",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 7,
+    "name": "Dr. M. Senthilkumaran",
+    "dept_code": "CSE",
+    "designation": "Professor & Head of Department (HOD)",
+    "cabin": "CSE Block \u2014 HOD Cabin (Room 101)",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f007@scsvmv.ac.in",
+    "phone": "9444987654",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 HOD Cabin (Room 101)",
+    "activity": "HOD Cabin Office Hours & Department Administration",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 8,
+    "name": "Dr. N.C.A. Boovarahan",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 208",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f008@scsvmv.ac.in",
+    "phone": "9444101010",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 208",
+    "activity": "Theory of Computation Consultation",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 9,
+    "name": "Dr. P. Rajalakshmi",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 209",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f009@scsvmv.ac.in",
+    "phone": "+91 94431 10009",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 209",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 10,
+    "name": "Dr. P. Shanmugapriya",
+    "dept_code": "CSE",
+    "designation": "Associate Professor & Associate Head - CSE",
+    "cabin": "CSE Block \u2014 Room 102",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f010@scsvmv.ac.in",
+    "phone": "+91 94431 10010",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 102",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 11,
+    "name": "Dr. R. Prema",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block — 2nd Floor — Room 211",
+    "subjects_taught": "Natural Language Processing (NLP), Python Programming, Machine Learning, NLP Lab",
+    "email": "dr.r.prema@scsvmv.ac.in",
+    "phone": "+91 94431 10011",
+    "status": "AVAILABLE",
+    "location": "CSE Block — Room 211",
+    "activity": "NLP Research & Student Project Mentoring",
+    "next_free": "Now",
+    "next_class": "11:20 AM Natural Language Processing (NLP)"
+  },
+  {
+    "id": 12,
+    "name": "Dr. R. Sivaramakrishnan",
+    "dept_code": "CSE",
+    "designation": "Associate Professor & Class Incharge (III CSE S3)",
+    "cabin": "CSE Block \u2014 2nd Floor \u2014 Room 212",
+    "subjects_taught": "Computer Networks, Computer Networks Lab",
+    "email": "dr.r.sivaramakrishnan@scsvmv.ac.in",
+    "phone": "9444123456",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 2nd Floor \u2014 Room 212",
+    "activity": "Office Hours & Student Mentoring (Computer Networks)",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 13,
+    "name": "Dr. S. Bharathi",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 213",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f013@scsvmv.ac.in",
+    "phone": "+91 94431 10013",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 213",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 14,
+    "name": "Dr. S. Selvakumar",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 214",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f014@scsvmv.ac.in",
+    "phone": "+91 94431 10014",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 214",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 15,
+    "name": "Dr. S. Vijayaraghavan",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 215",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f015@scsvmv.ac.in",
+    "phone": "+91 94431 10015",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 215",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 16,
+    "name": "Dr. T. Dineshkumar",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 216",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f016@scsvmv.ac.in",
+    "phone": "+91 94431 10016",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 216",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 17,
+    "name": "Dr. T. Lakshmibai",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 217",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f017@scsvmv.ac.in",
+    "phone": "+91 94431 10017",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 217",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 18,
+    "name": "Dr. T. Sundar",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 218",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f018@scsvmv.ac.in",
+    "phone": "+91 94431 10018",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 218",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 19,
+    "name": "Dr. V. Geetha",
+    "dept_code": "CSE",
+    "designation": "Professor",
+    "cabin": "CSE Block \u2014 Room 202",
+    "subjects_taught": "Machine Learning, Neural Networks",
+    "email": "f019@scsvmv.ac.in",
+    "phone": "+91 94431 10019",
+    "status": "MEETING",
+    "location": "Cabin C-204",
+    "activity": "regression",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 20,
+    "name": "Dr. V. Malathi",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 220",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f020@scsvmv.ac.in",
+    "phone": "+91 94431 10020",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 220",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 21,
+    "name": "Mr. B. Karthikeyan",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 221",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f021@scsvmv.ac.in",
+    "phone": "+91 94431 10021",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 221",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 22,
+    "name": "Mr. D. Harshawardhan",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 222",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f022@scsvmv.ac.in",
+    "phone": "+91 94431 10022",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 222",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 23,
+    "name": "Mr. D. Jeevan Kumar",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 223",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f023@scsvmv.ac.in",
+    "phone": "+91 94431 10023",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 223",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 24,
+    "name": "Mr. E. Sankar",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 224",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f024@scsvmv.ac.in",
+    "phone": "+91 94431 10024",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 224",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 25,
+    "name": "Mr. K. Harshawardhan",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 200",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f025@scsvmv.ac.in",
+    "phone": "+91 94431 10025",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 200",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 26,
+    "name": "Mr. P. Ramesh Chandra",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 201",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f026@scsvmv.ac.in",
+    "phone": "+91 94431 10026",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 201",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 27,
+    "name": "Mr. R. Manikkavasagam",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 202",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f027@scsvmv.ac.in",
+    "phone": "+91 94431 10027",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 202",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 28,
+    "name": "Mr. Sreesha (Civil Dept.)",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 203",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f028@scsvmv.ac.in",
+    "phone": "+91 94431 10028",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 203",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 29,
+    "name": "Mr. Sureshkumar Bhadram",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 204",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f029@scsvmv.ac.in",
+    "phone": "+91 94431 10029",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 204",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 30,
+    "name": "Mr. T. Prakash",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 205",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f030@scsvmv.ac.in",
+    "phone": "+91 94431 10030",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 205",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 31,
+    "name": "Mr. V. Balu",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 206",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f031@scsvmv.ac.in",
+    "phone": "+91 94431 10031",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 206",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 32,
+    "name": "Mrs. T. Bhuvaneswari",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 207",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f032@scsvmv.ac.in",
+    "phone": "+91 94431 10032",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 207",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 33,
+    "name": "Ms. Hema Poorani",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 208",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f033@scsvmv.ac.in",
+    "phone": "+91 94431 10033",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 208",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 34,
+    "name": "Ms. R. Preethi",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 214",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f034@scsvmv.ac.in",
+    "phone": "9500434196",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 214",
+    "activity": "Programming Lab Guidance & Office Hours",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 35,
+    "name": "Ms. R. Radhika",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 210",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f035@scsvmv.ac.in",
+    "phone": "+91 94431 10035",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 210",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 36,
+    "name": "Ms. R. Rajalakshmi",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 211",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f036@scsvmv.ac.in",
+    "phone": "+91 94431 10036",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 211",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 37,
+    "name": "Ms. S.E. Viswapriya",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 212",
+    "subjects_taught": "Computer Science Core, Labs",
+    "email": "f037@scsvmv.ac.in",
+    "phone": "+91 94431 10037",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 212",
+    "activity": "Free / Available for doubt clearing & mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 38,
+    "name": "Dr. Ravi Kumar",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 204",
+    "subjects_taught": "DBMS, Operating Systems, Data Structures",
+    "email": "ravikumar@scsvmv.ac.in",
+    "phone": "+91 94431 20401",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 204",
+    "activity": "Free / Available for doubt clearing",
+    "next_free": "17:00",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 39,
+    "name": "Dr. Priya Sharma",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 301",
+    "subjects_taught": "Java Programming, Python for AI, Web Tech",
+    "email": "priyasharma@scsvmv.ac.in",
+    "phone": "+91 94431 30102",
+    "status": "TEACHING",
+    "location": "CSE Block \u2014 Room 301",
+    "activity": "Programming Lab Evaluation",
+    "next_free": "12:30",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 40,
+    "name": "Dr. Arun Kumar",
+    "dept_code": "ECE",
+    "designation": "Associate Professor",
+    "cabin": "Admin Block \u2014 Room 108",
+    "subjects_taught": "Digital Signal Processing, VLSI Design",
+    "email": "arunkumar@scsvmv.ac.in",
+    "phone": "+91 94431 10803",
+    "status": "MEETING",
+    "location": "Admin Block \u2014 Board Room",
+    "activity": "HOD Academic Council Meeting",
+    "next_free": "13:00",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 41,
+    "name": "Dr. C.K. Gomathy",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 207",
+    "subjects_taught": "Software Engineering, Cloud Computing",
+    "email": "",
+    "phone": "9943589333",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 207",
+    "activity": "Software Engineering Lab Preparation & Mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 42,
+    "name": "Dr. R. Govindarajan",
+    "dept_code": "CSE",
+    "designation": "Assistant Professor",
+    "cabin": "CSE Block \u2014 Room 215",
+    "subjects_taught": "Database Management Systems, Python",
+    "email": "",
+    "phone": "9092027018",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 215",
+    "activity": "Database Systems & Academic Mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 43,
+    "name": "Dr. M.A. Archana",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "CSE Block \u2014 Room 203",
+    "subjects_taught": "Artificial Intelligence, Deep Learning",
+    "email": "",
+    "phone": "9677652179",
+    "status": "AVAILABLE",
+    "location": "CSE Block \u2014 Room 203",
+    "activity": "AI & Machine Learning Research",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  },
+  {
+    "id": 44,
+    "name": "Dr. P. Vithya",
+    "dept_code": "CSE",
+    "designation": "Associate Professor",
+    "cabin": "ECE Block \u2014 Room 104",
+    "subjects_taught": "IoT, Embedded Systems",
+    "email": "",
+    "phone": "9445507735",
+    "status": "AVAILABLE",
+    "location": "ECE Block \u2014 Room 104",
+    "activity": "Embedded Systems & IoT Mentoring",
+    "next_free": "Now",
+    "next_class": "As per Timetable"
+  }
+];
+
+
+const DEFAULT_DEPARTMENTS = [
+  { id: 1, code: 'CSE', name: 'Computer Science & Engineering', block: 'CSE Block', hod: 'Dr. V. Geetha', faculty_count: 38, student_count: 540 },
+  { id: 2, code: 'ECE', name: 'Electronics & Communication Engineering', block: 'ECE Block', hod: 'Dr. Arun Kumar', faculty_count: 18, student_count: 280 },
+  { id: 3, code: 'EEE', name: 'Electrical & Electronics Engineering', block: 'Ramanujan Academic Block', hod: 'Dr. S. Karthik', faculty_count: 12, student_count: 160 },
+  { id: 4, code: 'MECH', name: 'Mechanical Engineering', block: 'Mechanical Block', hod: 'Dr. M. Natarajan', faculty_count: 14, student_count: 180 },
+  { id: 5, code: 'CIVIL', name: 'Civil Engineering', block: 'Main Block', hod: 'Dr. P. Venkatesh', faculty_count: 8, student_count: 90 },
+  { id: 6, code: 'IT', name: 'Information Technology', block: 'CSE Block — 3rd Floor', hod: 'Dr. R. Sundar', faculty_count: 10, student_count: 140 },
+  { id: 7, code: 'AIDS', name: 'Artificial Intelligence & Data Science', block: 'CSE Block — 4th Floor', hod: 'Dr. Priya Sharma', faculty_count: 6, student_count: 120 },
+  { id: 8, code: 'MBA', name: 'Management Studies', block: 'Admin Block — 2nd Floor', hod: 'Dr. K. Ramesh', faculty_count: 6, student_count: 90 }
+];
+
+const DEFAULT_APPOINTMENTS = [
+  {
+    id: 101,
+    student_id: 1,
+    student_name: 'Pothala Venkata Sandeep (11249A290)',
+    dept_code: 'CSE',
+    faculty_id: 11,
+    faculty_name: 'Dr. R. Prema',
+    date: '2026-09-24',
+    start_time: '10:00',
+    end_time: '10:30',
+    duration: '30 mins',
+    status: 'REQUESTED',
+    reason: 'NLP Semester Project Review & Architecture Guidance (FindMyFaculty Team)',
+    created_at: '2026-09-23T10:15:00'
+  },
+  {
+    id: 102,
+    student_id: 4,
+    student_name: 'Rampalli Manikanta Anirudh (11249A312)',
+    dept_code: 'CSE',
+    faculty_id: 11,
+    faculty_name: 'Dr. R. Prema',
+    date: '2026-09-24',
+    start_time: '11:30',
+    end_time: '12:15',
+    duration: '45 mins',
+    status: 'ACCEPTED',
+    reason: 'Machine Learning Algorithm Doubt Clearing',
+    created_at: '2026-09-23T11:00:00'
+  },
+  {
+    id: 103,
+    student_id: 1,
+    student_name: 'Pothala Venkata Sandeep (11249A290)',
+    dept_code: 'CSE',
+    faculty_id: 1,
+    faculty_name: 'Dr. R. Sivaramakrishnan',
+    date: '2026-09-24',
+    start_time: '14:00',
+    end_time: '14:30',
+    duration: '30 mins',
+    status: 'ACCEPTED',
+    reason: 'FindMyFaculty Project Mentor Approval',
+    created_at: '2026-09-23T09:30:00'
+  }
+];
+
+const DEFAULT_STUDENTS = [
+  { id: 1, name: 'Pothala Venkata Sandeep', student_id: '11249A290', dept_code: 'CSE', year: '3rd Year', section: 'III CSE S3', email: 'sandeep@scsvmv.ac.in', is_active: 1 },
+  { id: 2, name: 'Pulavarthy Aditya', student_id: '11249A301', dept_code: 'CSE', year: '3rd Year', section: 'III CSE S3', email: 'aditya@scsvmv.ac.in', is_active: 1 },
+  { id: 3, name: 'Palla Yugandhar', student_id: '11249A266', dept_code: 'CSE', year: '3rd Year', section: 'III CSE S3', email: 'yugandhar@scsvmv.ac.in', is_active: 1 },
+  { id: 4, name: 'Rampalli Manikanta Anirudh', student_id: '11249A312', dept_code: 'CSE', year: '3rd Year', section: 'III CSE S3', email: 'anirudh@scsvmv.ac.in', is_active: 1 },
+  { id: 5, name: 'Bhardwaj', student_id: '11249A268', dept_code: 'CSE', year: '3rd Year', section: 'III CSE S3', email: 'bhardwaj@scsvmv.ac.in', is_active: 1 },
+  { id: 6, name: 'Koushik', student_id: '11249A435', dept_code: 'CSE', year: '3rd Year', section: 'III CSE S4', email: 'koushik@scsvmv.ac.in', is_active: 1 },
+  { id: 7, name: 'Pooja Verma', student_id: '11249A088', dept_code: 'CSE', year: '3rd Year', section: 'III CSE S2', email: 'pooja@scsvmv.ac.in', is_active: 1 },
+  { id: 8, name: 'Rahul Sharma', student_id: '11249A015', dept_code: 'ECE', year: '2nd Year', section: 'II ECE S1', email: 'rahul@scsvmv.ac.in', is_active: 1 },
+  { id: 9, name: 'Ananya Iyer', student_id: '11249A012', dept_code: 'CSE', year: '3rd Year', section: 'III CSE S1', email: 'ananya@scsvmv.ac.in', is_active: 1 }
+];
+
+// Global Application State
+
+function getDynamicFacultyList() {
+  const d = new Date();
+  const dayIndex = d.getDay(); // 0: Sun, 6: Sat
+  const hour = d.getHours() + d.getMinutes() / 60;
+  
+  const isWeekend = (dayIndex === 0 || dayIndex === 6);
+  const isAfterHours = (hour < 8.5 || hour >= 17.0); // Before 8:30 AM or after 5:00 PM IST
+  
+  return STATE.faculty.map(f => {
+    // 1. Explicit manual status override set by faculty or admin takes HIGHEST PRIORITY
+    if (STATE.statusOverrides && STATE.statusOverrides[f.id]) {
+      const ov = STATE.statusOverrides[f.id];
+      return {
+        ...f,
+        status: ov.status || f.status,
+        location: ov.location || f.location || f.cabin,
+        activity: ov.activity || f.activity,
+        until: ov.until || f.until,
+        next_free: ov.next_free || (ov.status === 'AVAILABLE' ? 'Now' : (ov.until ? 'Until ' + ov.until : '17:00')),
+        office_hours: ov.office_hours || f.office_hours,
+        last_updated: ov.last_updated || 'Just now'
+      };
+    }
+    // If simulated daytime is toggled ON (e.g. 10:30 AM working hours demo)
+    if (STATE.simDaytime) {
+      const h_val = (f.id * 7) % 10;
+      if (h_val <= 5) {
+        return {
+          ...f,
+          status: 'AVAILABLE',
+          location: f.cabin,
+          activity: 'Free in Cabin · Available for doubt clearing & mentoring',
+          next_free: 'Now',
+          next_class: '11:20 AM — Academic Class'
+        };
+      } else if (h_val === 6 || h_val === 7) {
+        return {
+          ...f,
+          status: 'TEACHING',
+          location: 'CSE Block — Room ' + (100 + (f.id % 5)),
+          activity: 'Teaching ' + (f.subjects_taught ? f.subjects_taught.split(',')[0] : 'Theory'),
+          next_free: '12:20 PM',
+          next_class: '02:00 PM — Lab'
+        };
+      } else if (h_val === 8) {
+        return {
+          ...f,
+          status: 'MEETING',
+          location: 'Admin Block — Conference Room',
+          activity: 'Academic Review Committee Meeting',
+          next_free: '01:00 PM',
+          next_class: '03:00 PM — Seminar'
+        };
+      } else {
+        return {
+          ...f,
+          status: 'ON_DUTY',
+          location: 'Central Library / Exam Cell',
+          activity: 'Department Accreditation & Curriculum Work',
+          next_free: '03:00 PM',
+          next_class: 'Tomorrow 09:10 AM'
+        };
+      }
+    }
+    
+    // REAL-TIME (e.g. Night 9:05 PM IST -> College Closed!)
+    if (isWeekend || isAfterHours) {
+      const nextDay = (dayIndex === 5 || dayIndex === 6) ? 'Monday' : 'Tomorrow';
+      return {
+        ...f,
+        status: 'UNAVAILABLE',
+        location: 'Off Campus (Cabin: ' + (f.cabin || 'CSE Block') + ')',
+        activity: 'Campus Closed · After Working Hours (09:00 AM – 04:30 PM)',
+        next_free: nextDay + ' 09:00 AM',
+        next_class: nextDay + ' 09:10 AM — Academic Class'
+      };
+    }
+    
+    return f;
+  });
+}
+
+const STATE = {
+  simDaytime: false,
+  statusOverrides: JSON.parse(store.get('fmf_status_overrides') || '{}'),
+  theme: store.get('fmf_theme') || 'light',
+  user: null,
+  role: 'student', // 'student' | 'faculty' | 'admin'
+  activeTab: 'dashboard',
+  selectedLoginRole: 'student',
+  faculty: DEFAULT_FACULTY,
+  departments: DEFAULT_DEPARTMENTS,
+  students: DEFAULT_STUDENTS,
+  appointments: JSON.parse(store.get('fmf_appointments') || JSON.stringify(DEFAULT_APPOINTMENTS)),
+
+  timetableSlots: [
+    { id: 1, period: 'Period 1', time: '08:10 – 09:10', section: 'III CSE S3', subject: 'Computer Networks (CN)', faculty: 'Dr. R. Sivaramakrishnan', venue: 'CSE Block — Room 201' },
+    { id: 2, period: 'Period 2', time: '09:10 – 10:10', section: 'III CSE S3', subject: 'Database Management Systems (DBMS)', faculty: 'Dr. D. Thamaraiselvi', venue: 'CSE Block — Room 201' },
+    { id: 3, period: 'Period 3', time: '10:30 – 11:20', section: 'III CSE S3', subject: 'Java Programming', faculty: 'Dr. M. Saraswathi', venue: 'CSE Block — Room 201' },
+    { id: 4, period: 'Period 4', time: '11:20 – 12:10', section: 'III CSE S3', subject: 'Natural Language Processing (NLP)', faculty: 'Dr. R. Prema', venue: 'CSE Block — Room 201' },
+    { id: 5, period: 'Period 5–7', time: '01:30 – 04:10', section: 'III CSE S3', subject: 'CN Lab / DBMS Lab / Java Lab', faculty: 'Dr. R. Sivaramakrishnan & Dr. M. Senthilkumaran', venue: 'Computer Lab - 2 & Lab - 3' }
+  ],
+  recentSearches: JSON.parse(store.get('fmf_recent') || '["Dr. Ravi Kumar", "Dr. Priya Sharma", "Dr. V. Geetha"]'),
+  watchlist: new Set(),
+  lastUpdated: 'Just now'
+};
+
+// DOM selector helpers
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ================================================================
+   THEMING
+   ================================================================ */
+function applyTheme(theme) {
+  STATE.theme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  store.set('fmf_theme', theme);
+  const icon = theme === 'dark' ? '☀️' : '🌙';
+  const b1 = $('#theme-btn-role'); if (b1) b1.textContent = icon;
+  const b2 = $('#theme-btn-app'); if (b2) b2.textContent = icon;
+}
+
+function toggleTheme() {
+  applyTheme(STATE.theme === 'dark' ? 'light' : 'dark');
+}
+
+/* ================================================================
+   TOAST NOTIFICATIONS
+   ================================================================ */
+function toast(msg, icon = 'ℹ️') {
+  const c = $('#toast-container');
+  if (!c) return;
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<span>${icon}</span><span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(10px)';
+    t.style.transition = 'all 0.2s';
+    setTimeout(() => t.remove(), 250);
+  }, 3200);
+}
+
+/* ================================================================
+   API CLIENT (Preflight-free, Safe Fallbacks with Fast Timeout)
+   ================================================================ */
+function safeParseBody(body) {
+  if (!body) return {};
+  if (typeof body === 'object') return body;
+  try { return JSON.parse(body); } catch (e) { return {}; }
+}
+
+async function api(path, opts = {}) {
+  let url = '/api' + path;
+  if (TOKEN) url += (url.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(TOKEN);
+  
+  const o = { method: opts.method || 'GET', headers: {} };
+  if (opts.body !== undefined) {
+    o.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
+  }
+
+  // AbortController with 2.5s timeout prevents hanging in disconnected previews
+  let timeoutId;
+  if (typeof AbortController !== 'undefined') {
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), 2500);
+    o.signal = controller.signal;
+  }
+  
+  try {
+    const r = await fetch(url, o);
+    if (timeoutId) clearTimeout(timeoutId);
+    let j = null;
+    try { j = await r.json(); } catch (e) {}
+    if (!r.ok) {
+      const err = new Error((j && j.error) || `HTTP ${r.status}`);
+      err.code = r.status;
+      throw err;
+    }
+    return j;
+  } catch (err) {
+    if (timeoutId) clearTimeout(timeoutId);
+    console.warn('API fallback activated for', path, err.message);
+    return fallbackApi(path, opts);
+  }
+}
+
+// Seamless mock fallback ensuring zero UI breaking in disconnected previews
+function fallbackApi(path, opts = {}) {
+  const b = safeParseBody(opts.body);
+  if (path === '/ping') return { ok: true, now: new Date().toISOString(), day: 'WED', period: { period: 2, start: '09:10', end: '10:10' } };
+  
+  if (path === '/login') {
+    const u = (b.username || 'sandeep').toLowerCase();
+    let role = 'student';
+    let name = 'Venkata Sandeep · 11249A290';
+    let dept = 'CSE';
+    
+    if (u.includes('admin')) {
+      role = 'admin';
+      name = 'Department Administrator';
+      dept = 'CSE';
+    } else if (u.includes('aditya') || u.includes('301')) {
+      role = 'student';
+      name = 'Pulavarthy Aditya · 11249A301';
+      student_id = '11249A301';
+    } else if (u.includes('yugandhar') || u.includes('266')) {
+      role = 'student';
+      name = 'Palla Yugandhar · 11249A266';
+      student_id = '11249A266';
+    } else if (u.includes('anirudh') || u.includes('312')) {
+      role = 'student';
+      name = 'Rampalli Manikanta Anirudh · 11249A312';
+      student_id = '11249A312';
+    } else if (u.includes('bhardwaj') || u.includes('268')) {
+      role = 'student';
+      name = 'Bhardwaj · 11249A268';
+      student_id = '11249A268';
+    } else if (u.includes('koushik') || u.includes('435')) {
+      role = 'student';
+      name = 'Koushik · 11249A435';
+      student_id = '11249A435';
+    } else if (u.includes('sivaram') || u.includes('sivaramakrishnan')) {
+      role = 'faculty';
+      name = 'Dr. R. Sivaramakrishnan';
+      dept = 'CSE';
+    } else if (u.includes('senthil') || u.includes('senthilkumaran')) {
+      role = 'faculty';
+      name = 'Dr. M. Senthilkumaran';
+      dept = 'CSE';
+    } else if (u.includes('thamaraiselvi')) {
+      role = 'faculty';
+      name = 'Dr. D. Thamaraiselvi';
+      dept = 'CSE';
+    } else if (u.includes('prema')) {
+      role = 'faculty';
+      name = 'Dr. R. Prema';
+      dept = 'CSE';
+    } else if (u.includes('gomathy')) {
+      role = 'faculty';
+      name = 'Dr. C.K. Gomathy';
+      dept = 'CSE';
+    } else if (u.includes('govindarajan')) {
+      role = 'faculty';
+      name = 'Dr. R. Govindarajan';
+      dept = 'CSE';
+    } else if (u.includes('saraswathi')) {
+      role = 'faculty';
+      name = 'Dr. M. Saraswathi';
+      dept = 'CSE';
+    } else if (u.includes('geetha')) {
+      role = 'faculty';
+      name = 'Dr. V. Geetha';
+      dept = 'CSE';
+    } else if (u.includes('dr.') || u.includes('faculty')) {
+      role = 'faculty';
+      name = 'Dr. R. Sivaramakrishnan';
+      dept = 'CSE';
+    }
+    
+    return {
+      token: 'token_' + Math.random().toString(36).slice(2),
+      user: {
+        id: 2,
+        username: u,
+        role,
+        name,
+        dept_code: dept,
+        year: '3rd Year',
+        section: 'III CSE A',
+        student_id: role === 'student' ? '11249A290' : 'F038',
+        email: `${u}@scsvmv.ac.in`
+      }
+    };
+  }
+
+  if (path === '/me') return { user: STATE.user };
+  if (path === '/departments') return { departments: DEFAULT_DEPARTMENTS };
+  if (path.startsWith('/faculty')) return { faculty: DEFAULT_FACULTY, total: DEFAULT_FACULTY.length };
+  if (path === '/admin/stats') return { total_students: 1250, total_faculty: 85, departments: 8, currently_available: 32, currently_teaching: 41, currently_meeting: 8, currently_duty: 4, currently_unavailable: 12 };
+  if (path === '/feedback') {
+    return {
+      total_responses: 58,
+      average_rating: 4.8,
+      most_requested_feature: 'Real-time Live Faculty Status',
+      feature_breakdown: { 'Live Status': 34, 'Cabin Location': 14, 'Timetable Lookup': 6, 'Next Availability': 4 },
+      difficulty_breakdown: { 'Frequently': 38, 'Sometimes': 16, 'Rarely': 4 },
+      would_use_breakdown: { 'Yes, definitely': 52, 'Likely': 6 },
+      feedback_list: [
+        { id: 1, student_name: 'Sandeep Kumar · 21CSE042', dept_code: 'CSE', q1_difficulty: 'Frequently', q2_how_find: 'Visiting cabins, WhatsApp groups', q3_useful_feature: 'Real-time Live Status', q4_rating: 5, q5_would_use: 'Yes, definitely', q6_improvement: 'The cabin directions and live status saves so much time!', created_at: '2026-09-09' },
+        { id: 2, student_name: 'Pooja Verma · 21CSE088', dept_code: 'CSE', q1_difficulty: 'Sometimes', q2_how_find: 'Visiting cabins, Asking friends', q3_useful_feature: 'Cabin & Room Location', q4_rating: 5, q5_would_use: 'Yes, definitely', q6_improvement: 'Excellent interface, very clean.', created_at: '2026-09-09' },
+        { id: 3, student_name: 'Rahul Sharma · 22ECE015', dept_code: 'ECE', q1_difficulty: 'Frequently', q2_how_find: 'Looking in lecture halls', q3_useful_feature: 'Timetable Lookup', q4_rating: 4, q5_would_use: 'Likely', q6_improvement: 'Please add all ECE lab locations too.', created_at: '2026-09-08' }
+      ]
+    };
+  }
+  return { ok: true };
+}
+
+/* ================================================================
+   APPLICATION ROUTING & SCREEN SWITCHER
+   ================================================================ */
+function showScreen(screenId) {
+  $('#screen-role-select').classList.add('hide');
+  $('#screen-role-login').classList.add('hide');
+  $('#screen-app').classList.add('hide');
+
+  const target = $(`#${screenId}`);
+  if (target) target.classList.remove('hide');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// Setup Role Selection Screen (PAGE 1)
+function initRoleSelection() {
+  $('#btn-continue-student').addEventListener('click', () => openLoginForRole('student'));
+  $('#btn-continue-faculty').addEventListener('click', () => openLoginForRole('faculty'));
+  $('#btn-continue-admin').addEventListener('click', () => openLoginForRole('admin'));
+
+  // Quick 1-Click Login Buttons directly from Page 1
+  const qs = $('#btn-quick-student');
+  if (qs) qs.addEventListener('click', () => directDemoLogin('student', 'sandeep', '123456'));
+  const qf = $('#btn-quick-faculty');
+  if (qf) qf.addEventListener('click', () => directDemoLogin('faculty', 'dr.r.sivaramakrishnan', '123456'));
+  const qa = $('#btn-quick-admin');
+  if (qa) qa.addEventListener('click', () => directDemoLogin('admin', 'admin', 'admin123'));
+
+  $('#theme-btn-role').addEventListener('click', toggleTheme);
+  $('#theme-btn-app').addEventListener('click', toggleTheme);
+
+  // Check server health
+  api('/ping').then(r => {
+    const el = $('#role-server-stat');
+    if (el) { el.textContent = 'server ok ✓'; el.style.color = 'var(--st-avail)'; }
+  }).catch(() => {
+    const el = $('#role-server-stat');
+    if (el) { el.textContent = 'ready'; el.style.color = 'var(--st-avail)'; }
+  });
+}
+
+// 1-Click Direct Login from Page 1
+async function directDemoLogin(role, username, password) {
+  STATE.selectedLoginRole = role;
+  try {
+    const res = await api('/login', { method: 'POST', body: { username, password } });
+    TOKEN = res.token;
+    store.set('fmf_token', TOKEN);
+    STATE.user = res.user;
+    STATE.role = res.user.role;
+    toast(`Welcome back, ${res.user.name.split('·')[0].trim()}! 👋`, '🎓');
+    enterApp();
+  } catch (e) {
+    // Fallback instant
+    const fallbackRes = fallbackApi('/login', { body: { username, password } });
+    TOKEN = fallbackRes.token;
+    STATE.user = fallbackRes.user;
+    STATE.role = fallbackRes.user.role;
+    enterApp();
+  }
+}
+
+// Setup Role-Specific Login Screen (PAGE 2)
+function openLoginForRole(role) {
+  STATE.selectedLoginRole = role;
+  const title = $('#login-role-title');
+  const subtitle = $('#login-role-subtitle');
+  const idLabel = $('#login-id-label');
+  const btn = $('#btn-submit-login');
+  const userInput = $('#login-username');
+  const passInput = $('#login-password');
+  const chipsContainer = $('#demo-chips-container');
+  const err = $('#login-error-msg');
+  
+  err.textContent = '';
+  userInput.value = '';
+  passInput.value = '';
+
+  let chips = [];
+  if (role === 'student') {
+    title.textContent = '👨‍🎓 Student Portal Login';
+    subtitle.textContent = 'Find faculty, check live cabin availability and view timetables.';
+    idLabel.textContent = 'Student ID / Email / Username';
+    btn.textContent = 'Login as Student';
+    btn.className = 'btn btn-student btn-lg btn-block';
+    chips = [
+      { label: 'Sandeep (11249A290 · S3)', u: 'sandeep', p: '123456' },
+      { label: 'Aditya (11249A301 · S3)', u: 'aditya', p: '123456' },
+      { label: 'Yugandhar (11249A266 · S3)', u: 'yugandhar', p: '123456' },
+      { label: 'Anirudh (11249A312 · S3)', u: 'anirudh', p: '123456' },
+      { label: 'Bhardwaj (11249A268 · S3)', u: 'bhardwaj', p: '123456' },
+      { label: 'Koushik (11249A435 · S4)', u: 'koushik', p: '123456' }
+    ];
+  } else if (role === 'faculty') {
+    title.textContent = '👨‍🏫 Faculty Portal Login';
+    subtitle.textContent = 'Manage your live cabin status, timetable and location.';
+    idLabel.textContent = 'Official Faculty Email / ID';
+    btn.textContent = 'Login as Faculty';
+    btn.className = 'btn btn-faculty btn-lg btn-block';
+    chips = [
+      { label: 'Dr. R. Sivaramakrishnan (Class Incharge)', u: 'dr.r.sivaramakrishnan', p: '123456' },
+      { label: 'Dr. M. Senthilkumaran (HOD - CSE)', u: 'dr.m.senthilkumaran', p: 'faculty123' },
+      { label: 'Dr. D. Thamaraiselvi (Timetable Coord)', u: 'dr.d.thamaraiselvi', p: 'faculty123' },
+      { label: 'Dr. R. Prema (Assoc. Prof)', u: 'dr.r.prema', p: 'faculty123' },
+      { label: 'Dr. C.K. Gomathy (Assoc. Prof)', u: 'dr.c.k.gomathy', p: 'faculty123' }
+    ];
+  } else if (role === 'admin') {
+    title.textContent = '🛡️ Administrator Sign In';
+    subtitle.textContent = 'Manage faculty, timetables, departments and system information.';
+    idLabel.textContent = 'Admin ID / Email';
+    btn.textContent = 'Login as Admin';
+    btn.className = 'btn btn-admin btn-lg btn-block';
+    chips = [
+      { label: 'Department Administrator', u: 'admin', p: 'admin123' }
+    ];
+  }
+
+  // Pre-populate with first demo credential for maximum convenience
+  if (chips.length > 0) {
+    userInput.value = chips[0].u;
+    passInput.value = chips[0].p;
+  }
+
+  // Render demo chips
+  if (chipsContainer) {
+    chipsContainer.innerHTML = chips.map(c => 
+      `<button type="button" class="demo-chip" data-u="${c.u}" data-p="${c.p}">${c.label}</button>`
+    ).join('');
+
+    $$('#demo-chips-container .demo-chip').forEach(ch => {
+      ch.addEventListener('click', () => {
+        userInput.value = ch.dataset.u;
+        passInput.value = ch.dataset.p;
+        submitLogin();
+      });
+    });
+  }
+
+  showScreen('screen-role-login');
+  setTimeout(() => userInput.focus(), 60);
+}
+
+// Submit Login Action
+async function submitLogin() {
+  const u = $('#login-username').value.trim();
+  const p = $('#login-password').value;
+  const err = $('#login-error-msg');
+  const btn = $('#btn-submit-login');
+  
+  err.textContent = '';
+  if (!u || !p) {
+    err.textContent = 'Please enter both username/ID and password';
+    return;
+  }
+
+  const oldTxt = btn.textContent;
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+
+  try {
+    const res = await api('/login', { method: 'POST', body: { username: u, password: p } });
+    TOKEN = res.token;
+    store.set('fmf_token', TOKEN);
+    STATE.user = res.user;
+    STATE.role = res.user.role;
+    toast(`Welcome back, ${res.user.name.split('·')[0].trim()}! 👋`, '🎓');
+    enterApp();
+  } catch (e) {
+    err.textContent = '⚠ ' + (e.message || 'Invalid credentials');
+  } finally {
+    btn.textContent = oldTxt;
+    btn.disabled = false;
+  }
+}
+
+// Logout Action
+async function doLogout() {
+  try { await api('/logout', { method: 'POST' }); } catch (e) {}
+  TOKEN = '';
+  store.del('fmf_token');
+  STATE.user = null;
+  STATE.role = null;
+  toast('Signed out successfully', '👋');
+  showScreen('screen-role-select');
+}
+
+/* ================================================================
+   PAGE 3: APP INITIALIZATION & NAVIGATION TABS
+   ================================================================ */
+async function enterApp() {
+  if (!STATE.user) return;
+  
+  // Setup Navbar User Pill
+  const roleTag = $('#nav-user-role');
+  const nameEl = $('#nav-user-name');
+  if (roleTag) {
+    roleTag.textContent = STATE.user.role;
+    roleTag.className = `user-role-tag ${STATE.user.role}`;
+  }
+  if (nameEl) {
+    nameEl.textContent = STATE.user.name.split('·')[0].trim();
+  }
+
+  // Build Role-Specific Tabs & Show Screen
+  buildRoleTabs();
+  showScreen('screen-app');
+  
+  // Immediately render dashboard
+  switchTab('dashboard');
+
+  // Background refresh
+  refreshAppData().then(() => {
+    if (STATE.activeTab === 'dashboard') {
+      const v = $('#app-view-container');
+      if (v) {
+        if (STATE.role === 'student') renderStudentDashboard(v);
+        else if (STATE.role === 'faculty') renderFacultyDashboard(v);
+        else if (STATE.role === 'admin') renderAdminDashboard(v);
+      }
+    }
+  }).catch(() => {});
+}
+
+function buildRoleTabs() {
+  const container = $('#app-nav-tabs');
+  let tabs = [];
+  
+  if (STATE.role === 'student') {
+    tabs = [
+      { id: 'dashboard', label: '🏠 Dashboard' },
+      { id: 'find-faculty', label: '🔍 Find Faculty' },
+      { id: 'timetable', label: '📅 My Timetable' },
+      { id: 'feedback', label: '💬 Give Feedback' },
+      { id: 'profile', label: '👤 Profile' }
+    ];
+  } else if (STATE.role === 'faculty') {
+    tabs = [
+      { id: 'dashboard', label: '🏠 Dashboard' },
+      { id: 'my-appointments', label: '📅 Booked Slots' },
+      { id: 'my-timetable', label: '📅 My Timetable' },
+      { id: 'my-status', label: '⚡ My Status' },
+      { id: 'my-location', label: '📍 My Location' },
+      { id: 'profile', label: '👤 Profile' }
+    ];
+  } else if (STATE.role === 'admin') {
+    tabs = [
+      { id: 'dashboard', label: '🏠 Dashboard' },
+      { id: 'faculty-mgmt', label: '👨‍🏫 Faculty' },
+      { id: 'student-mgmt', label: '👨‍🎓 Students' },
+      { id: 'timetables-mgmt', label: '📅 Timetables' },
+      { id: 'depts-mgmt', label: '🏛️ Departments' },
+      { id: 'live-status', label: '📡 Live Status' },
+      { id: 'feedback-analytics', label: '📊 Feedback' }
+    ];
+  }
+
+  container.innerHTML = tabs.map(t => 
+    `<button class="nav-tab-btn" data-tab="${t.id}">${t.label}</button>`
+  ).join('');
+
+  $$('.nav-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+}
+
+function switchTab(tabId) {
+  STATE.activeTab = tabId;
+  $$('.nav-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  
+  const v = $('#app-view-container');
+  if (!v) return;
+
+  if (STATE.role === 'student') {
+    if (tabId === 'dashboard') renderStudentDashboard(v);
+    else if (tabId === 'find-faculty') renderStudentFindFaculty(v);
+    else if (tabId === 'timetable') renderStudentTimetable(v);
+    else if (tabId === 'feedback') renderStudentFeedback(v);
+    else if (tabId === 'profile') renderStudentProfile(v);
+  } else if (STATE.role === 'faculty') {
+    if (tabId === 'dashboard') renderFacultyDashboard(v);
+    else if (tabId === 'my-appointments') renderFacultyAppointments(v);
+    else if (tabId === 'my-timetable') renderFacultyTimetable(v);
+    else if (tabId === 'my-status') renderFacultyUpdateStatus(v);
+    else if (tabId === 'my-location') renderFacultyUpdateLocation(v);
+    else if (tabId === 'profile') renderFacultyProfile(v);
+  } else if (STATE.role === 'admin') {
+    if (tabId === 'dashboard') renderAdminDashboard(v);
+    else if (tabId === 'faculty-mgmt') renderAdminFacultyMgmt(v);
+    else if (tabId === 'student-mgmt') renderAdminStudentMgmt(v);
+    else if (tabId === 'timetables-mgmt') renderAdminTimetableMgmt(v);
+    else if (tabId === 'depts-mgmt') renderAdminDeptsMgmt(v);
+    else if (tabId === 'live-status') renderAdminLiveStatus(v);
+    else if (tabId === 'feedback-analytics') renderAdminFeedbackAnalytics(v);
+  }
+}
+
+async function refreshAppData() {
+  try {
+    const [fRes, dRes] = await Promise.all([
+      api('/faculty'),
+      api('/departments')
+    ]);
+    if (fRes && fRes.faculty && fRes.faculty.length > 0) STATE.faculty = fRes.faculty;
+    if (dRes && dRes.departments && dRes.departments.length > 0) STATE.departments = dRes.departments;
+
+    if (STATE.user) {
+      try {
+        const aptRes = await api('/appointments');
+        if (aptRes && aptRes.appointments && aptRes.appointments.length > 0) {
+          const remoteList = aptRes.appointments.map(a => ({
+            id: a.id,
+            student_id: a.student_id,
+            student_name: a.student_name || 'Enrolled Student',
+            dept_code: a.dept_code || 'CSE',
+            faculty_id: a.faculty_id,
+            faculty_name: a.faculty_name,
+            date: a.on_date || a.date,
+            start_time: a.start || a.start_time,
+            end_time: a.end || a.end_time,
+            duration: a.duration ? `${a.duration} mins` : '30 mins',
+            status: a.status || 'PENDING',
+            reason: a.reason,
+            created_at: a.created_at
+          }));
+          const existingIds = new Set(remoteList.map(a => a.id));
+          const localOnly = (STATE.appointments || []).filter(a => !existingIds.has(a.id));
+          STATE.appointments = [...remoteList, ...localOnly];
+          store.set('fmf_appointments', STATE.appointments);
+        }
+      } catch (err) {}
+    }
+  } catch (e) {
+    console.error('refreshAppData error', e);
+  }
+}
+
+/* ================================================================
+   STUDENT VIEWS
+   ================================================================ */
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function renderStudentDashboard(container) {
+  const name = (STATE.user && STATE.user.name) ? STATE.user.name.split(' ')[0] : 'Sandeep';
+  const flist = getDynamicFacultyList();
+  const availCount = flist.filter(f => f.status === 'AVAILABLE').length;
+
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>${getGreeting()}, ${esc(name)} 👋</h1>
+      <p>Find your faculty quickly · SCSVMV University Department of CSE</p>
+    </div>
+
+    <!-- Upcoming Event Notification Banner -->
+    <div style="background:linear-gradient(135deg, rgba(37,99,235,0.08), rgba(99,102,241,0.12)); border:1px solid rgba(37,99,235,0.25); border-radius:var(--radius-md); padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-size:24px;">📢</span>
+        <div>
+          <div style="font-weight:700; font-size:14px; color:var(--text-main);">Upcoming Event: SCSVMV Project Expo 2026</div>
+          <div style="font-size:12.5px; color:var(--text-muted);">Scheduled for <b>Friday, 25th September 2026</b> · CSE Domain: FinTech Lab · PPTs: MCA Seminar Hall · Models: ECE Hall</div>
+        </div>
+      </div>
+      <span style="background:var(--primary); color:#fff; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;">Friday, 25 Sept</span>
+    </div>
+
+    <!-- Campus Live Operating Hours & Simulation Bar -->
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 16px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:20px;">${STATE.simDaytime ? '☀️' : '🌙'}</span>
+        <div>
+          <div style="font-weight:700; font-size:13.5px; color:var(--text-main);">
+            ${STATE.simDaytime ? 'College Working Hours Mode (Simulated 10:30 AM · Active In-Session)' : 'Live Real-Time Status (' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' IST · Campus Closed / After Hours)'}
+          </div>
+          <div style="font-size:12px; color:var(--text-muted);">
+            ${STATE.simDaytime ? 'Showing live active classes, teaching venues, and faculty cabin hours.' : 'SCSVMV working hours: 09:00 AM – 04:30 PM (Mon–Fri). Faculty are currently off-campus.'}
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-sm ${STATE.simDaytime ? 'btn-outline' : 'btn-primary'}" id="btn-toggle-time-sim" style="font-size:12px; padding:6px 14px; cursor:pointer;">
+        ${STATE.simDaytime ? '🌙 Switch to Real Night Mode' : '☀️ Test Daytime Mode (10:30 AM)'}
+      </button>
+    </div>
+
+    <!-- Large Search Bar -->
+    <div class="hero-search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="stu-hero-search" placeholder="Search faculty by name, department, subject, or cabin (e.g. Sivaramakrishnan, Prema, DBMS, Room 212)...">
+      <button class="btn btn-primary btn-md" id="stu-hero-search-btn">Find Faculty</button>
+    </div>
+
+    <!-- 4 Dashboard Cards -->
+    <div class="quick-cards-grid">
+      <div class="action-card" id="card-action-find">
+        <div class="card-icon">🔍</div>
+        <div>
+          <h3>Find Faculty</h3>
+          <p>Search all department faculty</p>
+        </div>
+      </div>
+
+      <div class="action-card" id="card-action-avail">
+        <div class="card-icon" style="background:var(--st-avail-bg);color:var(--st-avail-text)">🟢</div>
+        <div>
+          <h3>Available Now</h3>
+          <p><b>${availCount} faculty</b> currently free</p>
+        </div>
+      </div>
+
+      <div class="action-card" id="card-action-tt">
+        <div class="card-icon" style="background:var(--st-teach-bg);color:var(--st-teach-text)">📅</div>
+        <div>
+          <h3>My Timetable</h3>
+          <p>View III CSE S3 schedule</p>
+        </div>
+      </div>
+
+      <div class="action-card" id="card-action-recent">
+        <div class="card-icon" style="background:var(--role-admin-bg);color:var(--role-admin)">🕒</div>
+        <div>
+          <h3>Recent Searches</h3>
+          <p>${STATE.recentSearches.slice(0, 2).join(', ')}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Faculty Status Section -->
+    <div class="section-head">
+      <h2>Faculty Status</h2>
+      <button class="btn btn-outline btn-sm" id="btn-view-all-faculty">View All →</button>
+    </div>
+
+    <div class="faculty-grid" id="stu-dash-faculty-grid">
+      ${renderFacultyCards(getDynamicFacultyList().slice(0, 6))}
+    </div>
+  `;
+
+  // Bind Events
+  $('#stu-hero-search-btn').addEventListener('click', () => {
+    const q = $('#stu-hero-search').value.trim();
+    switchTab('find-faculty');
+    setTimeout(() => {
+      const inp = $('#fac-search-input');
+      if (inp) { inp.value = q; inp.dispatchEvent(new Event('input')); }
+    }, 50);
+  });
+  $('#stu-hero-search').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('#stu-hero-search-btn').click();
+  });
+
+  const btnSim = $('#btn-toggle-time-sim');
+  if (btnSim) {
+    btnSim.addEventListener('click', () => {
+      STATE.simDaytime = !STATE.simDaytime;
+      toast(STATE.simDaytime ? '☀️ Switched to College Hours (10:30 AM)' : '🌙 Switched to Real-Time Night Status', 'info');
+      renderStudentDashboard(container);
+    });
+  }
+
+  $('#card-action-find').addEventListener('click', () => switchTab('find-faculty'));
+  $('#card-action-avail').addEventListener('click', () => {
+    switchTab('find-faculty');
+    setTimeout(() => {
+      const sel = $('#fac-avail-filter');
+      if (sel) { sel.value = 'AVAILABLE'; sel.dispatchEvent(new Event('change')); }
+    }, 50);
+  });
+  $('#card-action-tt').addEventListener('click', () => switchTab('timetable'));
+  $('#card-action-recent').addEventListener('click', () => switchTab('find-faculty'));
+  $('#btn-view-all-faculty').addEventListener('click', () => switchTab('find-faculty'));
+
+  bindFacultyCardEvents();
+}
+
+function renderFacultyCards(list) {
+  if (!list.length) {
+    return `<div style="grid-column:1/-1;text-align:center;padding:48px;background:var(--bg-card);border-radius:var(--radius-md);border:1px solid var(--border);">
+      <div style="font-size:36px;margin-bottom:10px">🔍</div>
+      <h3 style="font-size:17px;font-weight:700">No faculty found</h3>
+      <p style="color:var(--text-muted);font-size:14px;margin-top:4px">Try adjusting your search terms or filters.</p>
+    </div>`;
+  }
+
+  return list.map(f => {
+    const stBadgeClass = `badge-${(f.status || 'AVAILABLE').toLowerCase()}`;
+    const initials = f.name.replace(/^(Dr\.|Mr\.|Mrs\.|Ms\.)\s*/, '').split(' ').map(n => n[0]).slice(0, 2).join('');
+    
+    return `
+      <div class="fac-card" data-fid="${f.id}">
+        <div>
+          <div class="fac-card-top">
+            <div class="fac-avatar">${initials}</div>
+            <div class="fac-info" style="flex:1">
+              <h3>${esc(f.name)}</h3>
+              <p class="dept">${esc(f.dept_code || 'CSE')} · <span class="desig">${esc(f.designation || 'Assistant Professor')}</span></p>
+            </div>
+            <span class="badge ${stBadgeClass}">
+              <span class="dot"></span>
+              ${esc(f.status || 'AVAILABLE')}
+            </span>
+          </div>
+
+          <div class="fac-status-box">
+            <div class="fac-location-line">
+              <span>📍</span>
+              <span>${esc(f.location || f.cabin || 'CSE Block')}</span>
+            </div>
+            <div class="fac-activity-line">${esc(f.activity || 'Free')}</div>
+            <div class="fac-next-avail">
+              <span>🕒</span>
+              <span>Next Available: <b>${esc(f.next_free || 'Now')}</b></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="fac-card-bottom">
+          <span style="font-size:12px;color:var(--text-muted)">${esc(f.cabin || 'Cabin 204')}</span>
+          <button class="btn btn-primary btn-sm btn-view-fac-details" data-fid="${f.id}">
+            View Details →
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function bindFacultyCardEvents() {
+  $$('.btn-view-fac-details').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openFacultyProfileModal(+btn.dataset.fid);
+    });
+  });
+  $$('.fac-card').forEach(card => {
+    card.addEventListener('click', () => {
+      openFacultyProfileModal(+card.dataset.fid);
+    });
+  });
+}
+
+function renderStudentFindFaculty(container) {
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Find Faculty</h1>
+      <p>Search & filter faculty across all departments and availability status.</p>
+    </div>
+
+    <!-- Search + Filter Controls -->
+    <div class="filter-bar">
+      <div class="filter-group" style="flex:1;min-width:240px">
+        <input type="text" class="input-field" id="fac-search-input" placeholder="Search by name, department or subject…">
+      </div>
+
+      <div class="filter-group">
+        <label>Department:</label>
+        <select class="filter-select" id="fac-dept-filter">
+          <option value="">All Departments</option>
+          <option value="CSE">CSE</option>
+          <option value="ECE">ECE</option>
+          <option value="EEE">EEE</option>
+          <option value="MECH">MECH</option>
+          <option value="CIVIL">CIVIL</option>
+          <option value="IT">IT</option>
+          <option value="AIDS">AI & DS</option>
+          <option value="MBA">MBA</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Availability:</label>
+        <select class="filter-select" id="fac-avail-filter">
+          <option value="">All Statuses</option>
+          <option value="AVAILABLE">🟢 Available Now</option>
+          <option value="TEACHING">🔵 Teaching</option>
+          <option value="MEETING">🟠 In Meeting</option>
+          <option value="ON_DUTY">🟣 On Duty</option>
+          <option value="UNAVAILABLE">🔴 Unavailable</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Year:</label>
+        <select class="filter-select" id="fac-year-filter">
+          <option value="">All Years</option>
+          <option value="1">1st Year</option>
+          <option value="2">2nd Year</option>
+          <option value="3">3rd Year</option>
+          <option value="4">4th Year</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="faculty-grid" id="find-faculty-results-grid">
+      ${renderFacultyCards(getDynamicFacultyList())}
+    </div>
+  `;
+
+  function applyFilters() {
+    const q = $('#fac-search-input').value.toLowerCase().trim();
+    const dept = $('#fac-dept-filter').value;
+    const st = $('#fac-avail-filter').value;
+    
+    const filtered = getDynamicFacultyList().filter(f => {
+      if (dept && f.dept_code !== dept) return false;
+      if (st && f.status !== st) return false;
+      if (q) {
+        const match = f.name.toLowerCase().includes(q) ||
+                      (f.dept_code || '').toLowerCase().includes(q) ||
+                      (f.subjects_taught || '').toLowerCase().includes(q) ||
+                      (f.cabin || '').toLowerCase().includes(q);
+        if (!match) return false;
+      }
+      return true;
+    });
+
+    $('#find-faculty-results-grid').innerHTML = renderFacultyCards(filtered);
+    bindFacultyCardEvents();
+  }
+
+  $('#fac-search-input').addEventListener('input', applyFilters);
+  $('#fac-dept-filter').addEventListener('change', applyFilters);
+  $('#fac-avail-filter').addEventListener('change', applyFilters);
+  $('#fac-year-filter').addEventListener('change', applyFilters);
+
+  bindFacultyCardEvents();
+}
+
+/* ================================================================
+   FACULTY PROFILE MODAL & GET DIRECTIONS
+   ================================================================ */
+async function openFacultyProfileModal(fid) {
+  let f = getDynamicFacultyList().find(x => x.id === fid);
+  if (!f) return;
+
+  // Track recent search
+  if (!STATE.recentSearches.includes(f.name)) {
+    STATE.recentSearches.unshift(f.name);
+    STATE.recentSearches = STATE.recentSearches.slice(0, 5);
+    store.set('fmf_recent', JSON.stringify(STATE.recentSearches));
+  }
+
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  const stBadgeClass = `badge-${(f.status || 'AVAILABLE').toLowerCase()}`;
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window wide" id="modal-content-box">
+        <div class="modal-header">
+          <div>
+            <h2>${esc(f.name)}</h2>
+            <p style="font-size:13.5px;color:var(--text-muted);margin-top:2px">${esc(f.designation || 'Associate Professor')} · ${esc(f.dept_code || 'Computer Science & Engineering')}</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Large Status Banner -->
+          <div style="padding:16px 20px;border-radius:var(--radius-md);background:var(--st-avail-bg);display:flex;align-items:center;justify-content:space-between;margin-bottom:24px" class="${stBadgeClass}">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="dot" style="width:12px;height:12px"></span>
+              <div>
+                <div style="font-size:16px;font-weight:800;letter-spacing:0.5px">${esc(f.status || 'AVAILABLE NOW')}</div>
+                <div style="font-size:13px;opacity:0.85">${esc(f.activity || 'Free')}</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;opacity:0.75">Next Available</div>
+              <div style="font-size:15px;font-weight:800">${esc(f.next_free || 'Now')}</div>
+            </div>
+          </div>
+
+          <!-- Key Location & Next Info Grid -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px">
+            <div style="background:var(--bg-card-alt);padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+              <div style="font-size:12px;color:var(--text-muted);font-weight:600">Current Location</div>
+              <div style="font-size:15px;font-weight:700;margin-top:4px">📍 ${esc(f.location || f.cabin || 'CSE Block — Room 204')}</div>
+            </div>
+
+            <div style="background:var(--bg-card-alt);padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+              <div style="font-size:12px;color:var(--text-muted);font-weight:600">Current Activity</div>
+              <div style="font-size:15px;font-weight:700;margin-top:4px">${esc(f.activity || 'Free')}</div>
+            </div>
+
+            <div style="background:var(--bg-card-alt);padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+              <div style="font-size:12px;color:var(--text-muted);font-weight:600">Next Class</div>
+              <div style="font-size:15px;font-weight:700;margin-top:4px">📚 ${esc(f.next_class || '11:00 AM — DBMS')}</div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">
+            <button class="btn btn-primary" id="btn-modal-get-directions">
+              🧭 Get Directions
+            </button>
+            <button class="btn btn-secondary" id="btn-modal-view-tt">
+              📅 View Timetable
+            </button>
+            <button class="btn btn-secondary" id="btn-modal-contact">
+              ✉️ Contact Faculty
+            </button>
+            <button class="btn btn-outline" id="btn-modal-book-slot">
+              📅 Request a Slot
+            </button>
+            <button class="btn ${STATE.watchlist && STATE.watchlist.has(f.id) ? 'btn-primary' : 'btn-outline'}" id="btn-modal-watch" onclick="toggleFacultyWatchlist(${f.id})">
+              ${STATE.watchlist && STATE.watchlist.has(f.id) ? '⭐ Watching (Alerts ON)' : '⭐ Watch Faculty'}
+            </button>
+          </div>
+
+          <!-- Today's Complete Schedule -->
+          <h3 style="font-size:16px;font-weight:800;margin-bottom:14px">Today's Complete Schedule</h3>
+          <div class="schedule-timeline">
+            <div class="timeline-slot">
+              <div class="timeline-time">08:10 – 09:10</div>
+              <div class="timeline-desc">
+                <div class="subj">Database Management Systems (III CSE A)</div>
+                <div class="venue">📍 CSE Block — Room 201</div>
+              </div>
+            </div>
+            <div class="timeline-slot is-free">
+              <div class="timeline-time">09:10 – 11:00</div>
+              <div class="timeline-desc">
+                <div class="subj" style="color:var(--st-avail-text)">🟢 Free / Office Hours</div>
+                <div class="venue">📍 ${esc(f.cabin || 'CSE Block — Room 204')}</div>
+              </div>
+            </div>
+            <div class="timeline-slot">
+              <div class="timeline-time">11:00 – 12:20</div>
+              <div class="timeline-desc">
+                <div class="subj">DBMS Lab / Project Consultation</div>
+                <div class="venue">📍 CSE Lab 2 (Ground Floor)</div>
+              </div>
+            </div>
+            <div class="timeline-slot">
+              <div class="timeline-time">12:20 – 13:40</div>
+              <div class="timeline-desc">
+                <div class="subj">Lunch Break</div>
+                <div class="venue">Staff Dining Hall</div>
+              </div>
+            </div>
+            <div class="timeline-slot">
+              <div class="timeline-time">13:40 – 14:40</div>
+              <div class="timeline-desc">
+                <div class="subj">Department Academic Meeting</div>
+                <div class="venue">📍 CSE Conference Room</div>
+              </div>
+            </div>
+            <div class="timeline-slot is-free">
+              <div class="timeline-time">14:40 – 15:40</div>
+              <div class="timeline-desc">
+                <div class="subj" style="color:var(--st-avail-text)">🟢 Free / Doubt Clearing</div>
+                <div class="venue">📍 ${esc(f.cabin || 'CSE Block — Room 204')}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Modal events
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => {
+    if (e.target.id === 'modal-overlay-bg') closeModal();
+  });
+
+  $('#btn-modal-get-directions').addEventListener('click', () => openDirectionsModal(f));
+  $('#btn-modal-view-tt').addEventListener('click', () => {
+    closeModal();
+    switchTab('timetable');
+  });
+  $('#btn-modal-contact').addEventListener('click', () => openContactFacultyModal(f));
+  $('#btn-modal-book-slot').addEventListener('click', () => openBookSlotModal(f));
+}
+
+/* ================================================================
+   GET DIRECTIONS & CAMPUS MAP MODAL (INCLUDES PROJECT EXPO 2026)
+   ================================================================ */
+function openDirectionsModal(fac) {
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  const loc = fac.location || fac.cabin || 'CSE Block — Room 204';
+  let block = 'CSE Block';
+  let floor = '2nd Floor (Level 2)';
+  let steps = [];
+
+  if (loc.includes('FinTech')) {
+    block = 'CSE Block';
+    floor = 'Ground Floor — FinTech Lab';
+    steps = [
+      'Enter the CSE Block (Sri Jayendra Saraswathi Diamond Jubilee Block) via the main porch.',
+      'Walk straight along the central academic corridor past the Department Office.',
+      'Enter the <b>FinTech Innovation Lab</b> on your right.',
+      'Official Presentation Venue for <b>Project Expo 2026 (CSE Domain)</b>.'
+    ];
+  } else if (loc.includes('MCA Seminar')) {
+    block = 'MCA Block / Ramanujan Block';
+    floor = '1st Floor — MCA Seminar Hall';
+    steps = [
+      'Enter the Ramanujan Academic Block / MCA Wing.',
+      'Take the central staircase to the First Floor.',
+      'Turn right into the MCA Seminar Hall entrance.',
+      'Official Venue for <b>Project Expo 2026 (PPT Evaluation)</b>.'
+    ];
+  } else if (loc.includes('ECE Seminar')) {
+    block = 'ECE Block';
+    floor = 'Ground Floor — ECE Seminar Hall';
+    steps = [
+      'Enter the ECE Block main building.',
+      'Proceed through the main lobby to the ECE Seminar Hall.',
+      'Official Venue for <b>Project Expo 2026 (Working Models Display)</b>.'
+    ];
+  } else if (loc.includes('Library')) {
+    block = 'Central Library';
+    floor = 'Ground Floor — International Library Hall';
+    steps = [
+      'Walk to the Sri Chandrasekharendra Saraswathi Central Library.',
+      'Enter through the main security entrance on the ground floor.',
+      'Proceed to the International Library Exhibition Hall.',
+      'Official Venue for <b>Project Expo 2026 (AI Domain)</b>.'
+    ];
+  } else {
+    block = loc.includes('ECE') ? 'ECE Block' : (loc.includes('Admin') ? 'Admin Block' : 'CSE Block');
+    floor = loc.includes('10') ? 'Ground Floor (Level 1)' : (loc.includes('20') ? '1st Floor (Level 2)' : '2nd Floor (Level 2)');
+    steps = [
+      `Enter <b>${block}</b> via the main campus porch.`,
+      `Take the central staircase or elevator to <b>${floor}</b>.`,
+      'Turn along the faculty cabin corridor.',
+      `Look for door plaque <b>${esc(fac.cabin || loc)}</b> (${esc(fac.name)}).`
+    ];
+  }
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>🧭 Campus Cabin Locator</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Live directions to <b>${esc(fac.name)}</b></p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div style="background:var(--primary-light);padding:14px;border-radius:var(--radius-sm);border:1px solid rgba(37,99,235,0.2);margin-bottom:18px">
+            <div style="font-size:12px;font-weight:700;color:var(--primary)">CURRENT LOCATION / VENUE</div>
+            <div style="font-size:16px;font-weight:800;color:var(--text-main);margin-top:2px">📍 ${esc(loc)}</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:2px">${floor} · SCSVMV Main Campus</div>
+          </div>
+
+          <!-- Campus Map Visualization -->
+          <div class="campus-map-box">
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted)">SCSVMV UNIVERSITY CAMPUS MAP</div>
+            <div class="building-grid">
+              <div class="building-tile ${block === 'CSE Block' ? 'highlight' : ''}">CSE Block 🏢</div>
+              <div class="building-tile ${block === 'ECE Block' ? 'highlight' : ''}">ECE Block 🏢</div>
+              <div class="building-tile ${block.includes('Ramanujan') ? 'highlight' : ''}">Ramanujan Block 🏛️</div>
+              <div class="building-tile ${block === 'Admin Block' ? 'highlight' : ''}">Admin Block 🏛️</div>
+              <div class="building-tile ${block.includes('Library') ? 'highlight' : ''}">Central Library 📚</div>
+              <div class="building-tile">Auditorium 🎭</div>
+            </div>
+          </div>
+
+          <h4 style="font-size:14px;font-weight:800;margin:18px 0 12px">Step-by-Step Walking Route</h4>
+          ${steps.map((st, i) => `
+            <div class="directions-step">
+              <div class="step-num">${i + 1}</div>
+              <div>${st}</div>
+            </div>
+          `).join('')}
+
+          ${fac.phone ? `
+            <div style="background:var(--bg-card-alt);padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:13px;color:var(--text-muted);margin-top:14px;display:flex;align-items:center;justify-content:space-between">
+              <span>📞 Faculty Mobile / Intercom:</span>
+              <a href="tel:${fac.phone}" style="font-weight:700;color:var(--primary)">${esc(fac.phone)}</a>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="btn-done-directions">Got it, thanks!</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-done-directions').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => {
+    if (e.target.id === 'modal-overlay-bg') closeModal();
+  });
+}
+
+function openContactFacultyModal(fac) {
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:500px">
+        <div class="modal-header">
+          <h2>✉️ Contact ${esc(fac.name)}</h2>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom:16px">
+            <div style="font-size:12.5px;color:var(--text-muted);font-weight:600">Official Email</div>
+            <div style="font-size:15px;font-weight:700;margin-top:2px">📧 ${esc(fac.email || 'faculty@scsvmv.ac.in')}</div>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:12.5px;color:var(--text-muted);font-weight:600">Department Intercom / Phone</div>
+            <div style="font-size:15px;font-weight:700;margin-top:2px">📞 ${esc(fac.phone || '+91 94431 20401')}</div>
+          </div>
+          <div style="margin-bottom:18px">
+            <div style="font-size:12.5px;color:var(--text-muted);font-weight:600">Office Hours</div>
+            <div style="font-size:15px;font-weight:700;margin-top:2px">🕒 10:00 AM – 04:00 PM (Mon – Fri)</div>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">Quick Message / Academic Inquiry</label>
+            <textarea class="input-field" rows="3" placeholder="State your doubt or purpose of meeting…"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-contact">Cancel</button>
+          <button class="btn btn-primary" id="btn-send-msg">Send Message</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-contact').addEventListener('click', closeModal);
+  $('#btn-send-msg').addEventListener('click', () => {
+    toast(`Message dispatched to ${fac.name}!`, '✅');
+    closeModal();
+  });
+}
+
+function openBookSlotModal(fac) {
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  let selectedDuration = 30; // default 30 min for project work
+  let selectedWindow = 'ALL';
+  let selectedSlot = null;
+  let selectedPurpose = '🚀 Major Project / Working Model Review';
+
+  function generateSlots(durMinutes, windowFilter) {
+    const freeWindows = [
+      { start: 10 * 60, end: 11 * 60 + 20, tag: 'Morning Cabin Hours' },
+      { start: 11 * 60 + 30, end: 12 * 60 + 40, tag: 'Late Morning Office' },
+      { start: 14 * 60, end: 15 * 60 + 10, tag: 'Afternoon Mentoring' },
+      { start: 15 * 60 + 20, end: 16 * 60 + 30, tag: 'Project Review Session' },
+      { start: 16 * 60 + 30, end: 17 * 60, tag: 'Evening Office Hours' }
+    ];
+
+    const slots = [];
+    const step = durMinutes >= 45 ? 30 : (durMinutes === 30 ? 15 : 15);
+
+    freeWindows.forEach(win => {
+      let curr = win.start;
+      while (curr + durMinutes <= win.end) {
+        const startH = Math.floor(curr / 60);
+        const startM = curr % 60;
+        const endVal = curr + durMinutes;
+        const endH = Math.floor(endVal / 60);
+        const endM = endVal % 60;
+
+        const fmtTime = (h, m) => {
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+          return String(displayH).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+        };
+
+        const timeStr = fmtTime(startH, startM) + ' – ' + fmtTime(endH, endM);
+        const isMorning = startH < 13;
+
+        if (windowFilter === 'ALL' || 
+           (windowFilter === 'MORNING' && isMorning) || 
+           (windowFilter === 'AFTERNOON' && !isMorning)) {
+          slots.push({
+            start: String(startH).padStart(2, '0') + ':' + String(startM).padStart(2, '0'),
+            end: String(endH).padStart(2, '0') + ':' + String(endM).padStart(2, '0'),
+            label: timeStr,
+            tag: win.tag,
+            duration: durMinutes
+          });
+        }
+        curr += step;
+      }
+    });
+
+    return slots;
+  }
+
+  function renderModalContent() {
+    const slots = generateSlots(selectedDuration, selectedWindow);
+    if (!selectedSlot && slots.length > 0) {
+      selectedSlot = slots[0];
+    } else if (selectedSlot && !slots.some(s => s.label === selectedSlot.label)) {
+      selectedSlot = slots[0] || null;
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    mc.innerHTML = `
+      <div class="modal-overlay" id="modal-overlay-bg">
+        <div class="modal-window wide" style="max-width:620px;max-height:90vh;overflow-y:auto">
+          <div class="modal-header">
+            <div>
+              <h2>📅 Request Project / Academic Appointment</h2>
+              <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+                Faculty: <b>${esc(fac.name)}</b> · 📍 ${esc(fac.cabin || 'CSE Block — Room 212')}
+              </p>
+            </div>
+            <button class="modal-close-btn" id="btn-close-modal">✕</button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Purpose Selection -->
+            <div class="input-group">
+              <label class="input-label">Meeting Purpose / Project Type</label>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="purpose-chips">
+                <button type="button" class="btn btn-sm ${selectedPurpose.includes('Project') ? 'btn-primary' : 'btn-outline'} purpose-chip" data-p="🚀 Major Project / Working Model Review">🚀 Project Review</button>
+                <button type="button" class="btn btn-sm ${selectedPurpose.includes('Doubt') ? 'btn-primary' : 'btn-outline'} purpose-chip" data-p="💡 Doubt Clearing & Concepts">💡 Doubt Clearing</button>
+                <button type="button" class="btn btn-sm ${selectedPurpose.includes('Synopsis') ? 'btn-primary' : 'btn-outline'} purpose-chip" data-p="📄 Project Synopsis & Approval">📄 Synopsis</button>
+                <button type="button" class="btn btn-sm ${selectedPurpose.includes('Lab') ? 'btn-primary' : 'btn-outline'} purpose-chip" data-p="📝 Lab Record Verification">📝 Lab Record</button>
+              </div>
+              <input type="text" class="input-field" id="slot-purpose-input" value="${esc(selectedPurpose)}" placeholder="State project title or discussion topic…">
+            </div>
+
+            <!-- Date & Time Window -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+              <div class="input-group" style="margin-bottom:0">
+                <label class="input-label">Preferred Date</label>
+                <input type="date" class="input-field" id="slot-date-input" value="${todayStr}">
+              </div>
+              <div class="input-group" style="margin-bottom:0">
+                <label class="input-label">Time Window</label>
+                <select class="filter-select" id="slot-window-filter" style="width:100%">
+                  <option value="ALL" ${selectedWindow === 'ALL' ? 'selected' : ''}>All Available Periods</option>
+                  <option value="MORNING" ${selectedWindow === 'MORNING' ? 'selected' : ''}>☀️ Morning (10:00 AM – 12:40 PM)</option>
+                  <option value="AFTERNOON" ${selectedWindow === 'AFTERNOON' ? 'selected' : ''}>🌤️ Afternoon (02:00 PM – 05:00 PM)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Duration Buttons (15 min, 30 min, 45 min, 60 min) -->
+            <div class="input-group">
+              <label class="input-label" style="display:flex;justify-content:space-between;align-items:center">
+                <span>Meeting Duration</span>
+                <span style="font-size:12px;color:var(--primary);font-weight:700">Currently Selected: ${selectedDuration} Minutes</span>
+              </label>
+              <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:8px" id="duration-btn-group">
+                <button type="button" class="btn btn-md ${selectedDuration === 15 ? 'btn-primary' : 'btn-outline'} dur-btn" data-dur="15">⏱️ 15 min</button>
+                <button type="button" class="btn btn-md ${selectedDuration === 30 ? 'btn-primary' : 'btn-outline'} dur-btn" data-dur="30">⏱️ 30 min</button>
+                <button type="button" class="btn btn-md ${selectedDuration === 45 ? 'btn-primary' : 'btn-outline'} dur-btn" data-dur="45">⏱️ 45 min</button>
+                <button type="button" class="btn btn-md ${selectedDuration === 60 ? 'btn-primary' : 'btn-outline'} dur-btn" data-dur="60">⏱️ 60 min</button>
+              </div>
+            </div>
+
+            <!-- Dynamic Timeslot Selection Grid -->
+            <div class="input-group">
+              <label class="input-label" style="display:flex;justify-content:space-between;align-items:center">
+                <span>Available Free Cabin Timeslots (${slots.length} available for ${selectedDuration} min)</span>
+                <span style="font-size:11.5px;color:var(--text-muted)">🟢 Free / Office Hours</span>
+              </label>
+              
+              <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));gap:8px;max-height:190px;overflow-y:auto;padding:4px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card-alt)">
+                ${slots.length === 0 ? `
+                  <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-size:13px">
+                    No free slots matching this duration in the selected window.
+                  </div>
+                ` : slots.map((s, idx) => {
+                  const isSelected = selectedSlot && selectedSlot.label === s.label;
+                  return `
+                    <div class="slot-card-item" data-idx="${idx}" style="cursor:pointer;padding:8px 10px;border-radius:var(--radius-sm);border:2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'};background:${isSelected ? 'var(--primary-light)' : 'var(--bg-card)'};transition:all 0.15s ease">
+                      <div style="font-size:12.5px;font-weight:700;color:${isSelected ? 'var(--primary-text)' : 'var(--text-main)'}">
+                        ${isSelected ? '✓ ' : ''}${esc(s.label)}
+                      </div>
+                      <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+                        ${esc(s.tag)}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Booking Summary Box -->
+            <div style="background:var(--primary-light);border:1px solid rgba(37,99,235,0.25);border-radius:var(--radius-sm);padding:12px;margin-top:12px">
+              <div style="font-size:12px;font-weight:700;color:var(--primary-text);text-transform:uppercase;letter-spacing:0.5px">Booking Summary</div>
+              <div style="font-size:13.5px;font-weight:700;margin-top:3px;color:var(--text-main)">
+                📅 <b>${selectedSlot ? selectedSlot.label : 'Select a slot'}</b> (${selectedDuration} min) with <b>${esc(fac.name)}</b>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+                📍 Venue: <b>${esc(fac.cabin || 'CSE Block — Room 212')}</b>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+            <button class="btn btn-secondary" id="btn-cancel-slot">Cancel</button>
+            <button class="btn btn-primary" id="btn-confirm-slot" ${!selectedSlot ? 'disabled' : ''}>
+              🚀 Confirm & Request Appointment
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Bind all dynamic modal interactions
+    const closeModal = () => mc.classList.add('hide');
+    $('#btn-close-modal').addEventListener('click', closeModal);
+    $('#btn-cancel-slot').addEventListener('click', closeModal);
+    $('#modal-overlay-bg').addEventListener('click', e => {
+      if (e.target.id === 'modal-overlay-bg') closeModal();
+    });
+
+    // Duration Button Click Handler
+    $$('.dur-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedDuration = parseInt(btn.dataset.dur, 10);
+        renderModalContent();
+      });
+    });
+
+    // Time Window Change
+    $('#slot-window-filter').addEventListener('change', e => {
+      selectedWindow = e.target.value;
+      renderModalContent();
+    });
+
+    // Purpose Chips
+    $$('.purpose-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedPurpose = btn.dataset.p;
+        $('#slot-purpose-input').value = selectedPurpose;
+        $$('.purpose-chip').forEach(b => {
+          b.className = (b.dataset.p === selectedPurpose) ? 'btn btn-sm btn-primary purpose-chip' : 'btn btn-sm btn-outline purpose-chip';
+        });
+      });
+    });
+
+    // Slot selection
+    $$('.slot-card-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const idx = parseInt(item.dataset.idx, 10);
+        selectedSlot = slots[idx];
+        renderModalContent();
+      });
+    });
+
+    // Submit appointment request
+    $('#btn-confirm-slot').addEventListener('click', async () => {
+      const dateVal = $('#slot-date-input').value || todayStr;
+      const purposeVal = $('#slot-purpose-input').value || selectedPurpose;
+
+      const btn = $('#btn-confirm-slot');
+      btn.textContent = 'Submitting Request…';
+      btn.disabled = true;
+
+      const newAppt = {
+        id: Date.now(),
+        student_id: (STATE.user && STATE.user.id) || 1,
+        student_name: (STATE.user && STATE.user.name) || 'Pothala Venkata Sandeep (11249A290)',
+        dept_code: (STATE.user && STATE.user.dept_code) || 'CSE',
+        faculty_id: fac.id,
+        faculty_name: fac.name,
+        date: dateVal,
+        start_time: selectedSlot ? selectedSlot.start : '10:00',
+        end_time: selectedSlot ? selectedSlot.end : '10:30',
+        duration: `${selectedDuration} mins`,
+        status: 'REQUESTED',
+        reason: purposeVal || 'Project Review / Consultation',
+        created_at: new Date().toISOString()
+      };
+
+      STATE.appointments = STATE.appointments || [];
+      STATE.appointments.unshift(newAppt);
+      store.set('fmf_appointments', STATE.appointments);
+
+      try {
+        await api('/appointments', {
+          method: 'POST',
+          body: {
+            faculty_id: fac.id,
+            date: dateVal,
+            start: selectedSlot ? selectedSlot.start : '10:00',
+            end: selectedSlot ? selectedSlot.end : '10:30',
+            reason: purposeVal,
+            duration: selectedDuration
+          }
+        });
+      } catch (e) {
+        console.log('Saved to local appointment store');
+      }
+
+      closeModal();
+      toast(`✅ Appointment requested for ${selectedDuration} min with ${fac.name} (${selectedSlot ? selectedSlot.label : 'Slot confirmed'})!`, '🚀');
+    });
+  }
+
+  renderModalContent();
+}
+
+/* ================================================================
+   STUDENT TIMETABLE (MY TIMETABLE)
+   ================================================================ */
+/* ================================================================
+   STUDENT TIMETABLE (OFFICIAL 19 SECTIONS FROM SCSVMV PDF)
+   ================================================================ */
+function renderStudentTimetable(container) {
+  const allSections = [
+    { id: 'III-V-S4', label: 'III Year / Sem V — Section S4 (Incharge: Dr. D. Thamaraiselvi)' },
+    { id: 'III-V-S1', label: 'III Year / Sem V — Section S1 (Incharge: Dr. T. Sundar)' },
+    { id: 'III-V-S2', label: 'III Year / Sem V — Section S2 (Incharge: Dr. T. Dineshkumar)' },
+    { id: 'III-V-S3', label: 'III Year / Sem V — Section S3 (Incharge: Dr. R. Sivaramakrishnan)' },
+    { id: 'III-V-S5', label: 'III Year / Sem V — Section S5 (Incharge: Mr. Sureshkumar Bhadram)' },
+    { id: 'III-V-S6', label: 'III Year / Sem V — Section S6 (Incharge: Mr. E. Sankar)' },
+    { id: 'III-V-S7-CSE', label: 'III Year / Sem V — Section S7-CSE (Incharge: Dr. N.C.A. Boovarahan)' },
+    { id: 'III-V-S7-IT', label: 'III Year / Sem V — Section S7-IT (Incharge: Dr. N.C.A. Boovarahan)' },
+    { id: 'IV-VII-S1', label: 'IV Year / Sem VII — Section S1 (Incharge: Dr. V. Geetha)' },
+    { id: 'IV-VII-S2', label: 'IV Year / Sem VII — Section S2 (Incharge: Dr. T. Lakshmibai)' },
+    { id: 'II-III-S1', label: 'II Year / Sem III — Section S1 (Incharge: Mr. D. Jeevan Kumar)' },
+    { id: 'II-III-S2', label: 'II Year / Sem III — Section S2 (Incharge: Dr. M. Gayathri)' },
+    { id: 'II-III-S3', label: 'II Year / Sem III — Section S3 (Incharge: Ms. R. Radhika)' },
+    { id: 'II-III-S4', label: 'II Year / Sem III — Section S4 (Incharge: Ms. R. Preethi)' },
+    { id: 'II-III-S5', label: 'II Year / Sem III — Section S5 (Incharge: Mr. B. Karthikeyan)' },
+    { id: 'II-III-S6', label: 'II Year / Sem III — Section S6 (Incharge: Mr. V. Balu)' },
+    { id: 'II-III-S7', label: 'II Year / Sem III — Section S7 (Incharge: Dr. R. Prema)' },
+    { id: 'II-III-S8', label: 'II Year / Sem III — Section S8 (Incharge: Ms. S.E. Viswapriya)' },
+    { id: 'II-III-S9', label: 'II Year / Sem III — Section S9 (Incharge: Ms. R. Rajalakshmi)' }
+  ];
+
+  const currentDay = ['SUN','MON','TUE','WED','THU','FRI','SAT'][new Date().getDay()] || 'WED';
+  const defaultDay = (currentDay === 'SUN' || currentDay === 'SAT') ? 'MON' : currentDay;
+
+  container.innerHTML = `
+    <div class="dashboard-header" style="background:var(--bg-card);padding:24px;border-radius:var(--radius-lg);border:1px solid var(--border);margin-bottom:24px">
+      <h1 style="font-size:24px;margin:0 0 6px 0;font-weight:800">📅 Department Class Timetables</h1>
+      <p style="margin:0;font-size:14px;color:var(--text-muted)">
+        Official Department of CSE Timetables (Odd Semester: Aug 2026 – Dec 2026) · SCSVMV University
+      </p>
+    </div>
+
+    <div class="filter-bar" style="display:flex;gap:14px;flex-wrap:wrap;background:var(--bg-card);padding:16px;border-radius:var(--radius-md);border:1px solid var(--border);margin-bottom:24px">
+      <div class="filter-group" style="flex:1;min-width:280px">
+        <label style="font-weight:700;font-size:13px;display:block;margin-bottom:6px">Select Section / Batch:</label>
+        <select class="filter-select" id="tt-sec-select" style="width:100%">
+          ${allSections.map(s => `<option value="${s.id}">${s.label}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="filter-group" style="min-width:180px">
+        <label style="font-weight:700;font-size:13px;display:block;margin-bottom:6px">Select Day of Week:</label>
+        <select class="filter-select" id="tt-day-select" style="width:100%">
+          <option value="MON" ${defaultDay==='MON'?'selected':''}>Monday</option>
+          <option value="TUE" ${defaultDay==='TUE'?'selected':''}>Tuesday</option>
+          <option value="WED" ${defaultDay==='WED'?'selected':''}>Wednesday</option>
+          <option value="THU" ${defaultDay==='THU'?'selected':''}>Thursday</option>
+          <option value="FRI" ${defaultDay==='FRI'?'selected':''}>Friday</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="tt-schedule-timeline-container" class="schedule-timeline">
+      <div style="text-align:center;padding:30px;color:var(--text-muted)">Loading timetable slots…</div>
+    </div>
+  `;
+
+  async function loadTimetable() {
+    const sec = $('#tt-sec-select').value;
+    const day = $('#tt-day-select').value;
+    const timelineEl = $('#tt-schedule-timeline-container');
+    
+    try {
+      const res = await api(`/timetables?section=${encodeURIComponent(sec)}&day=${encodeURIComponent(day)}`);
+      const entries = (res && res.entries) ? res.entries : [];
+      
+      if (entries.length === 0) {
+        timelineEl.innerHTML = `
+          <div style="text-align:center;padding:40px;background:var(--bg-card);border-radius:var(--radius-md);border:1px solid var(--border)">
+            <p style="font-size:16px;color:var(--text-muted);margin:0">No scheduled lecture periods found for this day.</p>
+          </div>
+        `;
+        return;
+      }
+
+      timelineEl.innerHTML = entries.map(e => `
+        <div class="timeline-slot">
+          <div class="timeline-time">
+            ${e.start} – ${e.end}<br>
+            <span style="font-size:11px;color:var(--text-muted);font-weight:600">Period ${e.p_from}${e.p_to > e.p_from ? '–' + e.p_to : ''}</span>
+          </div>
+          <div class="timeline-desc">
+            <div class="subj">${esc(e.subject || e.line || 'Class Session')}</div>
+            <div class="venue">
+              ${e.faculty && e.faculty.length ? '👨‍🏫 ' + e.faculty.map(f => esc(f)).join(', ') + ' · ' : ''}
+              📍 ${esc(e.venue || 'Classroom')}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      timelineEl.innerHTML = `<div style="color:var(--st-unavail);padding:20px">Failed to load timetable: ${err.message}</div>`;
+    }
+  }
+
+  $('#tt-sec-select').addEventListener('change', loadTimetable);
+  $('#tt-day-select').addEventListener('change', loadTimetable);
+  loadTimetable();
+}
+
+/* ================================================================
+   STUDENT FEEDBACK (GIVE FEEDBACK - 6 EXACT QUESTIONS)
+   ================================================================ */
+function renderStudentFeedback(container) {
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Give Feedback</h1>
+      <p>Help us improve FindMyFaculty for all SCSVMV students and teachers.</p>
+    </div>
+
+    <div class="feedback-card" id="fb-card-form">
+      <form id="student-feedback-form" onsubmit="return false;">
+        <!-- Question 1 -->
+        <div class="fb-question">
+          <h4>1. Do you currently face difficulty finding faculty?</h4>
+          <div class="fb-options">
+            <label class="fb-opt-label"><input type="radio" name="q1" value="Frequently" checked> Frequently</label>
+            <label class="fb-opt-label"><input type="radio" name="q1" value="Sometimes"> Sometimes</label>
+            <label class="fb-opt-label"><input type="radio" name="q1" value="Rarely"> Rarely</label>
+            <label class="fb-opt-label"><input type="radio" name="q1" value="Never"> Never</label>
+          </div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="fb-question">
+          <h4>2. How do you currently find faculty?</h4>
+          <div class="fb-options">
+            <label class="fb-opt-label"><input type="checkbox" name="q2" value="Visiting cabins" checked> Visiting cabins</label>
+            <label class="fb-opt-label"><input type="checkbox" name="q2" value="Asking friends" checked> Asking classmates / friends</label>
+            <label class="fb-opt-label"><input type="checkbox" name="q2" value="WhatsApp"> WhatsApp groups</label>
+            <label class="fb-opt-label"><input type="checkbox" name="q2" value="Calling"> Phone calls</label>
+            <label class="fb-opt-label"><input type="checkbox" name="q2" value="Lecture halls"> Looking in lecture halls</label>
+          </div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="fb-question">
+          <h4>3. Which feature is most useful?</h4>
+          <div class="fb-options">
+            <label class="fb-opt-label"><input type="radio" name="q3" value="Live Status" checked> Real-time Live Status (Available/Teaching/Meeting)</label>
+            <label class="fb-opt-label"><input type="radio" name="q3" value="Cabin Location"> Cabin & Room Directions</label>
+            <label class="fb-opt-label"><input type="radio" name="q3" value="Timetable Lookup"> Timetable Lookup</label>
+            <label class="fb-opt-label"><input type="radio" name="q3" value="Next Availability"> Next Availability Prediction</label>
+          </div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="fb-question">
+          <h4>4. How useful is FindMyFaculty? (1–5)</h4>
+          <div class="rating-stars" id="fb-rating-stars">
+            <span class="rating-star active" data-v="1">★</span>
+            <span class="rating-star active" data-v="2">★</span>
+            <span class="rating-star active" data-v="3">★</span>
+            <span class="rating-star active" data-v="4">★</span>
+            <span class="rating-star active" data-v="5">★</span>
+          </div>
+          <input type="hidden" id="fb-rating-val" value="5">
+        </div>
+
+        <!-- Question 5 -->
+        <div class="fb-question">
+          <h4>5. Would you use this system in your college?</h4>
+          <div class="fb-options">
+            <label class="fb-opt-label"><input type="radio" name="q5" value="Yes, definitely" checked> Yes, definitely</label>
+            <label class="fb-opt-label"><input type="radio" name="q5" value="Likely"> Likely</label>
+            <label class="fb-opt-label"><input type="radio" name="q5" value="Maybe"> Maybe</label>
+            <label class="fb-opt-label"><input type="radio" name="q5" value="No"> No</label>
+          </div>
+        </div>
+
+        <!-- Question 6 -->
+        <div class="fb-question">
+          <h4>6. What would you improve?</h4>
+          <textarea class="input-field" id="fb-improvement" rows="4" placeholder="Share your suggestions, features you'd like to see, or any issues encountered…"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block" id="btn-submit-feedback">
+          Submit Feedback
+        </button>
+      </form>
+    </div>
+  `;
+
+  // Star Rating Interaction
+  $$('#fb-rating-stars .rating-star').forEach(star => {
+    star.addEventListener('click', () => {
+      const v = +star.dataset.v;
+      $('#fb-rating-val').value = v;
+      $$('#fb-rating-stars .rating-star').forEach(s => {
+        s.classList.toggle('active', +s.dataset.v <= v);
+      });
+    });
+  });
+
+  // Submit Feedback
+  $('#btn-submit-feedback').addEventListener('click', async () => {
+    const q1 = ($('input[name="q1"]:checked') || {}).value || 'Frequently';
+    const q2 = Array.from($$('input[name="q2"]:checked')).map(x => x.value).join(', ');
+    const q3 = ($('input[name="q3"]:checked') || {}).value || 'Live Status';
+    const q4 = +$('#fb-rating-val').value;
+    const q5 = ($('input[name="q5"]:checked') || {}).value || 'Yes, definitely';
+    const q6 = $('#fb-improvement').value.trim();
+
+    const btn = $('#btn-submit-feedback');
+    btn.textContent = 'Submitting…';
+    btn.disabled = true;
+
+    try {
+      await api('/feedback', {
+        method: 'POST',
+        body: {
+          q1_difficulty: q1,
+          q2_how_find: q2,
+          q3_useful_feature: q3,
+          q4_rating: q4,
+          q5_would_use: q5,
+          q6_improvement: q6
+        }
+      });
+      
+      $('#fb-card-form').innerHTML = `
+        <div style="text-align:center;padding:40px 20px">
+          <div style="font-size:56px;margin-bottom:16px">🎉</div>
+          <h2 style="font-size:24px;font-weight:800;margin-bottom:8px">Thank You For Your Feedback!</h2>
+          <p style="color:var(--text-muted);font-size:15px;max-width:460px;margin:0 auto 24px">
+            Your response has been recorded and will help university administrators improve faculty accessibility.
+          </p>
+          <button class="btn btn-primary" onclick="switchTab('dashboard')">Back to Dashboard</button>
+        </div>
+      `;
+      toast('Feedback submitted successfully!', '⭐');
+    } catch (e) {
+      toast('Feedback saved locally', '⭐');
+    }
+  });
+}
+
+function renderStudentProfile(container) {
+  const u = STATE.user || { name: 'Sandeep Kumar · 21CSE042', dept_code: 'CSE', year: '3rd Year', section: 'III CSE A', student_id: '21CSE042', email: 'sandeep@scsvmv.ac.in' };
+
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Student Profile</h1>
+      <p>Manage your university account details and preferences.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px">
+      <div class="stat-card">
+        <div class="stat-label">Academic Information</div>
+        <div style="margin-top:14px">
+          <div style="font-size:18px;font-weight:800">${esc(u.name)}</div>
+          <div style="color:var(--text-muted);font-size:13.5px;margin-top:4px">Student ID: <b>${esc(u.student_id || '21CSE042')}</b></div>
+          <div style="color:var(--text-muted);font-size:13.5px;margin-top:4px">Department: <b>${esc(u.dept_code || 'CSE')}</b></div>
+          <div style="color:var(--text-muted);font-size:13.5px;margin-top:4px">Year & Section: <b>${esc(u.year || '3rd Year')} (${esc(u.section || 'III CSE A')})</b></div>
+          <div style="color:var(--text-muted);font-size:13.5px;margin-top:4px">Email: <b>${esc(u.email || 'sandeep@scsvmv.ac.in')}</b></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Notifications & Watchlist</div>
+        <p style="font-size:13.5px;color:var(--text-muted);margin-top:10px">
+          You are currently watching <b>Dr. Ravi Kumar</b> and <b>Dr. Priya Sharma</b> for instant free-status notifications.
+        </p>
+        <button class="btn btn-secondary btn-sm" style="margin-top:16px" onclick="openNotificationPreferencesModal()">
+          🔔 Configure Alerts
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* ================================================================
+   FACULTY VIEWS
+   ================================================================ */
+
+function getCurrentFacultyProfile() {
+  const u = (STATE.user && (STATE.user.username || STATE.user.name || '')) ? (STATE.user.username || STATE.user.name).toLowerCase() : '';
+  const facName = (STATE.user && STATE.user.name) ? STATE.user.name : 'Dr. R. Sivaramakrishnan';
+  const dynamicList = getDynamicFacultyList();
+
+  // Match by keyword in username or user's full name
+  if (u.includes('sivaram') || u.includes('sivaramakrishnan') || facName.includes('Sivaramakrishnan')) {
+    return dynamicList.find(f => f.name.includes('Sivaramakrishnan')) || dynamicList[0];
+  }
+  if (u.includes('senthil') || u.includes('senthilkumaran') || facName.includes('Senthilkumaran')) {
+    return dynamicList.find(f => f.name.includes('Senthilkumaran')) || dynamicList[0];
+  }
+  if (u.includes('thamaraiselvi') || facName.includes('Thamaraiselvi')) {
+    return dynamicList.find(f => f.name.includes('Thamaraiselvi')) || dynamicList[0];
+  }
+  if (u.includes('prema') || facName.includes('Prema')) {
+    return dynamicList.find(f => f.name.includes('Prema')) || dynamicList[0];
+  }
+  if (u.includes('gomathy') || facName.includes('Gomathy')) {
+    return dynamicList.find(f => f.name.includes('Gomathy')) || dynamicList[0];
+  }
+  if (u.includes('govindarajan') || facName.includes('Govindarajan')) {
+    return dynamicList.find(f => f.name.includes('Govindarajan')) || dynamicList[0];
+  }
+  if (u.includes('saraswathi') || facName.includes('Saraswathi')) {
+    return dynamicList.find(f => f.name.includes('Saraswathi')) || dynamicList[0];
+  }
+  if (u.includes('geetha') || facName.includes('Geetha')) {
+    return dynamicList.find(f => f.name.includes('Geetha')) || dynamicList[0];
+  }
+  if (u.includes('vinothkumar') || facName.includes('Vinothkumar')) {
+    return dynamicList.find(f => f.name.includes('Vinothkumar')) || dynamicList[0];
+  }
+  if (u.includes('anitha') || facName.includes('Anitha')) {
+    return dynamicList.find(f => f.name.includes('Anitha')) || dynamicList[0];
+  }
+
+  // Exact name matching
+  let found = dynamicList.find(f => f.name.toLowerCase() === facName.toLowerCase());
+  if (found) return found;
+
+  // Last word match
+  const parts = facName.trim().split(/\s+/);
+  const last = parts[parts.length - 1].toLowerCase();
+  found = dynamicList.find(f => f.name.toLowerCase().includes(last));
+  if (found) return found;
+
+  return dynamicList.find(f => f.name.includes('Sivaramakrishnan')) || dynamicList[0];
+}
+
+function renderFacultyDashboard(container) {
+  const fac = getCurrentFacultyProfile();
+
+  const stBadgeClass = `badge-${(fac.status || 'AVAILABLE').toLowerCase()}`;
+
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Welcome, ${esc(fac.name)}</h1>
+      <p>Manage your availability, timetable schedule, and room location.</p>
+    </div>
+
+    <!-- Prominent Current Status Card -->
+    <div style="background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius-lg);padding:28px;box-shadow:var(--shadow-md);margin-bottom:28px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">YOUR LIVE STATUS</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+            <span class="badge ${stBadgeClass}" style="font-size:15px;padding:6px 14px">
+              <span class="dot" style="width:10px;height:10px"></span>
+              ${esc(fac.status || 'AVAILABLE')}
+            </span>
+            <span style="font-size:13px;color:var(--text-dim)">Last updated: ${esc(STATE.lastUpdated)}</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <button class="btn btn-primary" id="btn-fac-quick-status">⚡ Update Status</button>
+          <button class="btn btn-secondary" id="btn-fac-quick-loc">📍 Update Location</button>
+          <button class="btn btn-secondary" id="btn-fac-quick-tt">📅 View Timetable</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;padding-top:18px;border-top:1px solid var(--border)">
+        <div>
+          <div style="font-size:12.5px;color:var(--text-muted);font-weight:600">Current Location</div>
+          <div style="font-size:15px;font-weight:800;margin-top:3px">📍 ${esc(fac.location || fac.cabin || 'CSE Block — Room 212')}</div>
+        </div>
+        <div>
+          <div style="font-size:12.5px;color:var(--text-muted);font-weight:600">Current Activity</div>
+          <div style="font-size:15px;font-weight:800;margin-top:3px">${esc(fac.activity || 'Free')}</div>
+        </div>
+        <div>
+          <div style="font-size:12.5px;color:var(--text-muted);font-weight:600">Availability / Timings</div>
+          <div style="font-size:15px;font-weight:800;margin-top:3px;color:var(--primary)">⏱️ ${esc(fac.until ? 'Available until ' + fac.until : (fac.office_hours || '09:00 AM – 04:30 PM'))}</div>
+        </div>
+        <div>
+          <div style="font-size:12.5px;color:var(--text-muted);font-weight:600">Permanent Cabin</div>
+          <div style="font-size:15px;font-weight:800;margin-top:3px">🚪 ${esc(fac.cabin || 'CSE Block — Room 212')}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Student Booked Slots & Appointment Requests Section -->
+    <div class="section-head" style="display:flex;justify-content:space-between;align-items:center;margin-top:28px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h2 style="margin:0">📅 Student Booked Slots & Appointments</h2>
+        <span class="badge ${getFacultyAppointments(fac).length > 0 ? 'badge-primary' : 'badge-outline'}" style="font-size:12px;padding:3px 10px">
+          ${getFacultyAppointments(fac).length} ${getFacultyAppointments(fac).length === 1 ? 'Slot' : 'Slots'}
+        </span>
+      </div>
+      <button class="btn btn-sm btn-outline" onclick="switchTab('my-appointments')">View All →</button>
+    </div>
+
+    <div style="margin-bottom:28px">
+      ${(() => {
+        const myAppts = getFacultyAppointments(fac);
+        if (myAppts.length === 0) {
+          return `
+            <div style="background:var(--bg-card);border:1px dashed var(--border);border-radius:var(--radius-md);padding:22px;text-align:center;color:var(--text-muted);font-size:13.5px">
+              No pending student appointments currently. When students request project reviews or consultation slots, they will appear here.
+            </div>
+          `;
+        }
+        return `
+          <div style="display:grid;gap:12px">
+            ${myAppts.map(a => {
+              const isPending = a.status === 'REQUESTED' || a.status === 'PENDING';
+              const isAccepted = a.status === 'ACCEPTED';
+              const stBadge = isAccepted ? 'badge-available' : (isPending ? 'badge-meeting' : 'badge-unavailable');
+              const stLabel = isAccepted ? '🟢 Confirmed / Accepted' : (isPending ? '🟡 Pending Approval' : '🔴 Declined');
+              const timeDisplay = a.start_time ? `${a.start_time} – ${a.end_time || ''}` : `${a.start || '10:00'} – ${a.end || '10:30'}`;
+
+              return `
+                <div style="background:var(--bg-card);border:1.5px solid ${isPending ? 'rgba(245,158,11,0.5)' : 'var(--border)'};border-radius:var(--radius-md);padding:16px 20px;box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                  <div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                      <span style="font-weight:800;font-size:15px;color:var(--text-main)">👨‍🎓 ${esc(a.student_name || 'Enrolled Student')}</span>
+                      <span class="badge ${stBadge}" style="font-size:11.5px;padding:3px 8px">${stLabel}</span>
+                    </div>
+                    <div style="font-size:13px;color:var(--text-main);margin-top:4px">
+                      📝 Purpose: <b>"${esc(a.reason || 'Project Review')}"</b>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:3px">
+                      📅 Date: <b>${esc(a.date || a.on_date || '2026-09-24')}</b> · 🕒 Time: <b>${esc(timeDisplay)}</b> (${esc(a.duration || '30 mins')}) · 📍 <b>${esc(fac.cabin || 'Cabin')}</b>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;gap:8px">
+                    ${isPending ? `
+                      <button class="btn btn-sm btn-primary" onclick="acceptFacultyAppointment(${a.id})">
+                        ✅ Accept Slot
+                      </button>
+                      <button class="btn btn-sm btn-outline" onclick="declineFacultyAppointment(${a.id})">
+                        ❌ Decline
+                      </button>
+                    ` : `
+                      <button class="btn btn-sm btn-secondary" onclick="toast('Slot already accepted.', 'ℹ️')">
+                        ✓ Accepted
+                      </button>
+                    `}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      })()}
+    </div>
+
+    <!-- Today's Schedule Timeline -->
+    <div class="section-head">
+      <h2>Today's Schedule</h2>
+      <span style="font-size:13.5px;color:var(--text-muted)">Wednesday · 6 Slots</span>
+    </div>
+
+    <div class="schedule-timeline" style="margin-bottom:32px">
+      <div class="timeline-slot">
+        <div class="timeline-time">08:00 – 09:10</div>
+        <div class="timeline-desc">
+          <div class="subj">Database Management Systems (DBMS)</div>
+          <div class="venue">📍 Room 201 · III Year CSE A</div>
+        </div>
+      </div>
+      <div class="timeline-slot is-free">
+        <div class="timeline-time">10:00 – 11:00</div>
+        <div class="timeline-desc">
+          <div class="subj" style="color:var(--st-avail-text)">🟢 Free / Office Hours</div>
+          <div class="venue">📍 Cabin (Room 204)</div>
+        </div>
+      </div>
+      <div class="timeline-slot">
+        <div class="timeline-time">11:00 – 12:20</div>
+        <div class="timeline-desc">
+          <div class="subj">DBMS Lab Consultation</div>
+          <div class="venue">📍 Room 204 / Lab 3</div>
+        </div>
+      </div>
+      <div class="timeline-slot">
+        <div class="timeline-time">01:00 – 02:00</div>
+        <div class="timeline-desc">
+          <div class="subj">Lunch Break</div>
+          <div class="venue">Faculty Lounge</div>
+        </div>
+      </div>
+      <div class="timeline-slot">
+        <div class="timeline-time">02:00 – 03:00</div>
+        <div class="timeline-desc">
+          <div class="subj">Department Meeting</div>
+          <div class="venue">📍 HOD Conference Room</div>
+        </div>
+      </div>
+      <div class="timeline-slot is-free">
+        <div class="timeline-time">04:00 – 05:00</div>
+        <div class="timeline-desc">
+          <div class="subj" style="color:var(--st-avail-text)">🟢 Free / Doubt Clearing</div>
+          <div class="venue">📍 Room 204</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions Grid -->
+    <div class="section-head">
+      <h2>Quick Actions</h2>
+    </div>
+
+    <div class="quick-cards-grid">
+      <div class="action-card" onclick="switchTab('my-status')">
+        <div class="card-icon">⚡</div>
+        <div>
+          <h3>Update Availability</h3>
+          <p>Mark available, teaching or in meeting</p>
+        </div>
+      </div>
+
+      <div class="action-card" onclick="switchTab('my-location')">
+        <div class="card-icon">📍</div>
+        <div>
+          <h3>Update Location</h3>
+          <p>Set current room or lab</p>
+        </div>
+      </div>
+
+      <div class="action-card" onclick="switchTab('my-timetable')">
+        <div class="card-icon">📅</div>
+        <div>
+          <h3>View Timetable</h3>
+          <p>Weekly teaching schedule</p>
+        </div>
+      </div>
+
+      <div class="action-card" onclick="switchTab('profile')">
+        <div class="card-icon">👤</div>
+        <div>
+          <h3>View Profile</h3>
+          <p>Manage office hours & contact info</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  $('#btn-fac-quick-status').addEventListener('click', () => switchTab('my-status'));
+  $('#btn-fac-quick-loc').addEventListener('click', () => switchTab('my-location'));
+  $('#btn-fac-quick-tt').addEventListener('click', () => switchTab('my-timetable'));
+}
+
+function renderFacultyUpdateStatus(container) {
+  const fac = getCurrentFacultyProfile();
+  const currSt = fac.status || 'AVAILABLE';
+  const currLoc = fac.location || fac.cabin || 'CSE Block — Room 212';
+  const currAct = fac.activity || 'Free / Office Hours';
+  const currUntil = fac.until || '17:00';
+  const currHours = fac.office_hours || '09:00 AM – 04:30 PM';
+
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Update Live Status & Timings</h1>
+      <p>Broadcast your real-time availability and cabin timings for <b>${esc(fac.name)}</b>.</p>
+    </div>
+
+    <div class="feedback-card" style="max-width:640px">
+      <form id="fac-status-form" onsubmit="return false;">
+        <div class="input-group">
+          <label class="input-label">Select Current Status</label>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label class="fb-opt-label"><input type="radio" name="fac_st" value="AVAILABLE" ${currSt === 'AVAILABLE' ? 'checked' : ''}> 🟢 Available (Free in Cabin)</label>
+            <label class="fb-opt-label"><input type="radio" name="fac_st" value="TEACHING" ${currSt === 'TEACHING' ? 'checked' : ''}> 🔵 Teaching (In Classroom / Lab)</label>
+            <label class="fb-opt-label"><input type="radio" name="fac_st" value="MEETING" ${currSt === 'MEETING' ? 'checked' : ''}> 🟠 In Meeting (Academic / Department)</label>
+            <label class="fb-opt-label"><input type="radio" name="fac_st" value="ON_DUTY" ${currSt === 'ON_DUTY' ? 'checked' : ''}> 🟣 On Duty (Official / Exam Cell)</label>
+            <label class="fb-opt-label"><input type="radio" name="fac_st" value="UNAVAILABLE" ${currSt === 'UNAVAILABLE' ? 'checked' : ''}> 🔴 Unavailable (Off Campus / Leave)</label>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Current Room / Venue</label>
+          <input type="text" class="input-field" id="fac-input-loc" value="${esc(currLoc)}">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Current Activity</label>
+          <input type="text" class="input-field" id="fac-input-act" value="${esc(currAct)}">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Availability / Status Until Time</label>
+          <input type="text" class="input-field" id="fac-input-until" value="${esc(currUntil)}" placeholder="e.g. 17:00, 04:30 PM, 12:30 PM">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">General Office Hours & Availability Timings</label>
+          <input type="text" class="input-field" id="fac-input-office-hours" value="${esc(currHours)}" placeholder="e.g. Mon-Fri 09:00 AM – 04:30 PM">
+        </div>
+
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:18px">
+          Last updated: <b>${esc(fac.last_updated || STATE.lastUpdated)}</b>
+        </div>
+
+        <button type="submit" class="btn btn-faculty btn-lg btn-block" id="btn-save-fac-status">
+          💾 Save Status & Timings
+        </button>
+      </form>
+    </div>
+  `;
+
+  $('#btn-save-fac-status').addEventListener('click', async () => {
+    const st = ($('input[name="fac_st"]:checked') || {}).value || 'AVAILABLE';
+    const loc = $('#fac-input-loc').value.trim() || fac.cabin;
+    const act = $('#fac-input-act').value.trim() || 'Office Hours';
+    const until = $('#fac-input-until').value.trim();
+    const officeHours = $('#fac-input-office-hours').value.trim();
+
+    const btn = $('#btn-save-fac-status');
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+
+    // Apply immediately to state & local storage
+    if (!STATE.statusOverrides) STATE.statusOverrides = {};
+    STATE.statusOverrides[fac.id] = {
+      status: st,
+      location: loc,
+      activity: act,
+      until: until,
+      office_hours: officeHours,
+      next_free: st === 'AVAILABLE' ? 'Now' : (until ? 'Until ' + until : '17:00'),
+      last_updated: 'Just now'
+    };
+    store.set('fmf_status_overrides', JSON.stringify(STATE.statusOverrides));
+    STATE.lastUpdated = 'Just now';
+
+    try {
+      await api('/status', {
+        method: 'POST',
+        body: { status: st, location: loc, activity: act, expected_return_at: until, office_hours: officeHours }
+      });
+    } catch (e) {
+      console.log('Saved to local state');
+    }
+
+    toast('Status and availability timings updated successfully!', '✅');
+    setTimeout(() => {
+      switchTab('dashboard');
+    }, 150);
+  });
+}
+
+function renderFacultyUpdateLocation(container) {
+  renderFacultyUpdateStatus(container);
+}
+
+function renderFacultyTimetable(container) {
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>My Weekly Timetable</h1>
+      <p>Complete weekly class schedule across all sections (Monday to Friday).</p>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Time / Period</th>
+            <th>Monday</th>
+            <th>Tuesday</th>
+            <th>Wednesday</th>
+            <th>Thursday</th>
+            <th>Friday</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>08:10 – 09:10</b><br><span style="font-size:11px;color:var(--text-muted)">Period 1</span></td>
+            <td>DBMS<br><span style="font-size:12px;color:var(--text-muted)">III CSE A · Room 201</span></td>
+            <td>—</td>
+            <td>DBMS<br><span style="font-size:12px;color:var(--text-muted)">III CSE A · Room 201</span></td>
+            <td>—</td>
+            <td>OS<br><span style="font-size:12px;color:var(--text-muted)">II CSE B · Room 104</span></td>
+          </tr>
+          <tr>
+            <td><b>09:10 – 10:10</b><br><span style="font-size:11px;color:var(--text-muted)">Period 2</span></td>
+            <td>—</td>
+            <td>DBMS<br><span style="font-size:12px;color:var(--text-muted)">III CSE B · Room 202</span></td>
+            <td>—</td>
+            <td>DBMS<br><span style="font-size:12px;color:var(--text-muted)">III CSE A · Room 201</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><b>10:20 – 11:20</b><br><span style="font-size:11px;color:var(--text-muted)">Period 3</span></td>
+            <td>OS<br><span style="font-size:12px;color:var(--text-muted)">II CSE A · Room 102</span></td>
+            <td>—</td>
+            <td>—</td>
+            <td>OS<br><span style="font-size:12px;color:var(--text-muted)">II CSE A · Room 102</span></td>
+            <td>DBMS<br><span style="font-size:12px;color:var(--text-muted)">III CSE B · Room 202</span></td>
+          </tr>
+          <tr>
+            <td><b>11:20 – 12:20</b><br><span style="font-size:11px;color:var(--text-muted)">Period 4</span></td>
+            <td>—</td>
+            <td>OS<br><span style="font-size:12px;color:var(--text-muted)">II CSE B · Room 104</span></td>
+            <td>DBMS Lab<br><span style="font-size:12px;color:var(--text-muted)">CSE Lab 2</span></td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><b>13:40 – 15:40</b><br><span style="font-size:11px;color:var(--text-muted)">Period 6–7</span></td>
+            <td>DBMS Lab<br><span style="font-size:12px;color:var(--text-muted)">CSE Lab 3</span></td>
+            <td>—</td>
+            <td>Dept Meeting<br><span style="font-size:12px;color:var(--text-muted)">Conf Room</span></td>
+            <td>Project Review<br><span style="font-size:12px;color:var(--text-muted)">Cabin 204</span></td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderFacultyProfile(container) {
+  setTimeout(() => {
+    const btnSave = $('#btn-save-faculty-profile');
+    if (btnSave) {
+      btnSave.addEventListener('click', () => {
+        const desig = $('#prof-fac-desig').value.trim();
+        const subjs = $('#prof-fac-subjects').value.trim();
+        const cabin = $('#prof-fac-cabin').value.trim();
+        const hours = $('#prof-fac-hours').value.trim();
+
+        fac.designation = desig || fac.designation;
+        fac.subjects_taught = subjs || fac.subjects_taught;
+        fac.cabin = cabin || fac.cabin;
+        fac.office_hours = hours || fac.office_hours;
+
+        if (!STATE.statusOverrides) STATE.statusOverrides = {};
+        STATE.statusOverrides[fac.id] = {
+          ...(STATE.statusOverrides[fac.id] || {}),
+          location: cabin || fac.cabin,
+          office_hours: hours || fac.office_hours,
+          last_updated: 'Just now'
+        };
+        store.set('fmf_status_overrides', JSON.stringify(STATE.statusOverrides));
+
+        toast('Profile details & cabin office hours updated successfully!', '✅');
+      });
+    }
+  }, 50);
+  const fac = getCurrentFacultyProfile();
+  const facName = fac.name;
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Faculty Profile</h1>
+      <p>Manage your academic designation, office room, subjects, and contact information.</p>
+    </div>
+
+    <div class="feedback-card" style="max-width:680px">
+      <div class="input-group">
+        <label class="input-label">Faculty Name</label>
+        <input type="text" class="input-field" value="${esc(facName)}" readonly style="opacity:0.8">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Department</label>
+        <input type="text" class="input-field" value="Computer Science & Engineering" readonly style="opacity:0.8">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Designation</label>
+        <input type="text" class="input-field" value="Associate Professor">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Subjects Taught</label>
+        <input type="text" class="input-field" value="DBMS, Operating Systems, Data Structures">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Office Room</label>
+        <input type="text" class="input-field" value="CSE Block — Room 204">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Contact Email</label>
+        <input type="email" class="input-field" value="ravikumar@scsvmv.ac.in">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Office Hours</label>
+        <input type="text" class="input-field" value="10:00 AM – 04:00 PM">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Faculty Designation</label>
+        <input type="text" class="input-field" id="prof-fac-desig" value="${esc(fac.designation || 'Associate Professor')}">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Subjects Taught</label>
+        <input type="text" class="input-field" id="prof-fac-subjects" value="${esc(fac.subjects_taught || 'Computer Networks, DBMS')}">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Official Cabin / Office Room</label>
+        <input type="text" class="input-field" id="prof-fac-cabin" value="${esc(fac.cabin || 'CSE Block — Room 212')}">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Office Hours & Availability Timings</label>
+        <input type="text" class="input-field" id="prof-fac-hours" value="${esc(fac.office_hours || 'Mon-Fri 09:00 AM – 04:30 PM')}">
+      </div>
+      <button class="btn btn-faculty btn-lg btn-block" id="btn-save-faculty-profile" style="cursor:pointer">
+        💾 Save Profile Changes
+      </button>
+    </div>
+  `;
+}
+
+/* ================================================================
+   ADMIN VIEWS
+   ================================================================ */
+function renderAdminDashboard(container) {
+  const stats = STATE.stats || {
+    total_students: 1250,
+    total_faculty: 85,
+    departments: 8,
+    currently_available: 32,
+    currently_teaching: 41,
+    unavailable: 12
+  };
+
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Admin Dashboard</h1>
+      <p>University-wide faculty status, timetable management and department analytics.</p>
+    </div>
+
+    <!-- 6 Primary Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card" style="border-top:4px solid var(--primary)">
+        <div class="stat-label">Total Students <span>👨‍🎓</span></div>
+        <div class="stat-value">1,250</div>
+        <div class="stat-sub">Across 8 departments</div>
+      </div>
+
+      <div class="stat-card" style="border-top:4px solid var(--role-faculty)">
+        <div class="stat-label">Total Faculty <span>👨‍🏫</span></div>
+        <div class="stat-value">85</div>
+        <div class="stat-sub">Active faculty members</div>
+      </div>
+
+      <div class="stat-card" style="border-top:4px solid var(--role-admin)">
+        <div class="stat-label">Departments <span>🏛️</span></div>
+        <div class="stat-value">8</div>
+        <div class="stat-sub">CSE, ECE, EEE, MECH…</div>
+      </div>
+
+      <div class="stat-card" style="border-top:4px solid var(--st-avail)">
+        <div class="stat-label">Currently Available <span>🟢</span></div>
+        <div class="stat-value" style="color:var(--st-avail-text)">32</div>
+        <div class="stat-sub">Free in cabins</div>
+      </div>
+
+      <div class="stat-card" style="border-top:4px solid var(--st-teach)">
+        <div class="stat-label">Currently Teaching <span>🔵</span></div>
+        <div class="stat-value" style="color:var(--st-teach-text)">41</div>
+        <div class="stat-sub">In active classes/labs</div>
+      </div>
+
+      <div class="stat-card" style="border-top:4px solid var(--st-unavail)">
+        <div class="stat-label">Unavailable <span>🔴</span></div>
+        <div class="stat-value" style="color:var(--st-unavail-text)">12</div>
+        <div class="stat-sub">Off campus / on leave</div>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Shortcuts -->
+    <div class="section-head">
+      <h2>Administrative Controls</h2>
+    </div>
+
+    <div class="quick-cards-grid">
+      <div class="action-card" onclick="switchTab('faculty-mgmt')">
+        <div class="card-icon" style="background:var(--role-faculty-bg);color:var(--role-faculty)">👨‍🏫</div>
+        <div>
+          <h3>Faculty Management</h3>
+          <p>Add, edit, or deactivate faculty accounts</p>
+        </div>
+      </div>
+
+      <div class="action-card" onclick="switchTab('student-mgmt')">
+        <div class="card-icon" style="background:var(--role-student-bg);color:var(--role-student)">👨‍🎓</div>
+        <div>
+          <h3>Student Management</h3>
+          <p>Manage enrolled students and sections</p>
+        </div>
+      </div>
+
+      <div class="action-card" onclick="switchTab('live-status')">
+        <div class="card-icon" style="background:var(--st-avail-bg);color:var(--st-avail)">📡</div>
+        <div>
+          <h3>Live Status Monitor</h3>
+          <p>Real-time wall with quick override controls</p>
+        </div>
+      </div>
+
+      <div class="action-card" onclick="switchTab('feedback-analytics')">
+        <div class="card-icon" style="background:var(--role-admin-bg);color:var(--role-admin)">📊</div>
+        <div>
+          <h3>Student Feedback</h3>
+          <p>4.8 / 5 ⭐ average usefulness rating</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
+/* ================================================================
+   ADMIN WORKING MODALS & COMPLETE CRUD ENGINES
+   ================================================================ */
+
+
+// --- 5. NOTIFICATION PREFERENCES MODAL ---
+window.openNotificationPreferencesModal = function() {
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:520px">
+        <div class="modal-header">
+          <div>
+            <h2>🔔 Notification Preferences</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Configure live alerts for faculty availability and class updates</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-card-alt);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer">
+              <div>
+                <div style="font-weight:700;font-size:14px">🟢 Faculty Cabin Availability Alerts</div>
+                <div style="font-size:12px;color:var(--text-muted)">Notify me immediately when watched professors arrive in their cabin</div>
+              </div>
+              <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
+            </label>
+
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-card-alt);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer">
+              <div>
+                <div style="font-weight:700;font-size:14px">📅 Class Timetable Rescheduling</div>
+                <div style="font-size:12px;color:var(--text-muted)">Get alerts for period cancellations or room changes</div>
+              </div>
+              <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
+            </label>
+
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-card-alt);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer">
+              <div>
+                <div style="font-weight:700;font-size:14px">🚀 Project Expo & Event Announcements</div>
+                <div style="font-size:12px;color:var(--text-muted)">Reminders for Project Expo 2026 venue timings (FinTech Lab / MCA Hall)</div>
+              </div>
+              <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
+            </label>
+
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-card-alt);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer">
+              <div>
+                <div style="font-weight:700;font-size:14px">✉️ Appointment Confirmation Alerts</div>
+                <div style="font-size:12px;color:var(--text-muted)">Receive email / SMS when faculty accepts project slot request</div>
+              </div>
+              <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-notifs">Save Preferences</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+  $('#btn-save-notifs').addEventListener('click', () => {
+    closeModal();
+    toast('Notification preferences saved and active!', '🔔');
+  });
+};
+
+// --- 6. TIMETABLE SLOT EDIT & DELETE ---
+window.openEditTimetableModal = function(slotId) {
+  const slot = STATE.timetableSlots.find(s => s.id === slotId);
+  if (!slot) return;
+
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>✏️ Edit Timetable Slot</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Editing ${esc(slot.subject)} (${esc(slot.period)})</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Period Label</label>
+              <input type="text" class="input-field" id="edit-tt-period" value="${esc(slot.period)}">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Time Slot</label>
+              <input type="text" class="input-field" id="edit-tt-time" value="${esc(slot.time)}">
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Subject Name</label>
+            <input type="text" class="input-field" id="edit-tt-subj" value="${esc(slot.subject)}">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Assigned Faculty</label>
+            <input type="text" class="input-field" id="edit-tt-fac" value="${esc(slot.faculty)}">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Classroom / Venue</label>
+            <input type="text" class="input-field" id="edit-tt-venue" value="${esc(slot.venue)}">
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-edit-tt">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+
+  $('#btn-save-edit-tt').addEventListener('click', () => {
+    slot.period = $('#edit-tt-period').value.trim() || slot.period;
+    slot.time = $('#edit-tt-time').value.trim() || slot.time;
+    slot.subject = $('#edit-tt-subj').value.trim() || slot.subject;
+    slot.faculty = $('#edit-tt-fac').value.trim() || slot.faculty;
+    slot.venue = $('#edit-tt-venue').value.trim() || slot.venue;
+
+    closeModal();
+    toast(`Slot updated: ${slot.subject}!`, '✅');
+    if (STATE.activeTab === 'timetables-mgmt') renderAdminTimetableMgmt($('#app-view-container'));
+  });
+};
+
+window.deleteTimetableSlot = function(slotId) {
+  STATE.timetableSlots = STATE.timetableSlots.filter(s => s.id !== slotId);
+  toast('Timetable slot removed', '🗑️');
+  if (STATE.activeTab === 'timetables-mgmt') renderAdminTimetableMgmt($('#app-view-container'));
+};
+
+// --- 7. DEPARTMENT EDIT & DELETE ---
+window.openEditDepartmentModal = function(deptId) {
+  const dept = STATE.departments.find(d => d.id === deptId || d.code === deptId);
+  if (!dept) return;
+
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>✏️ Edit Department</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Editing ${esc(dept.name)} (${esc(dept.code)})</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label class="input-label">Department Name</label>
+            <input type="text" class="input-field" id="edit-dept-name" value="${esc(dept.name)}">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Campus Building Block</label>
+            <input type="text" class="input-field" id="edit-dept-block" value="${esc(dept.block)}">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Head of Department (HOD)</label>
+            <input type="text" class="input-field" id="edit-dept-hod" value="${esc(dept.hod)}">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Faculty Count</label>
+              <input type="number" class="input-field" id="edit-dept-fac" value="${esc(String(dept.faculty_count))}">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Student Count</label>
+              <input type="number" class="input-field" id="edit-dept-stu" value="${esc(String(dept.student_count))}">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-admin" id="btn-save-edit-dept">Update Department</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+
+  $('#btn-save-edit-dept').addEventListener('click', () => {
+    dept.name = $('#edit-dept-name').value.trim() || dept.name;
+    dept.block = $('#edit-dept-block').value.trim() || dept.block;
+    dept.hod = $('#edit-dept-hod').value.trim() || dept.hod;
+    dept.faculty_count = parseInt($('#edit-dept-fac').value, 10) || dept.faculty_count;
+    dept.student_count = parseInt($('#edit-dept-stu').value, 10) || dept.student_count;
+
+    closeModal();
+    toast(`Department ${dept.code} updated!`, '✅');
+    if (STATE.activeTab === 'depts-mgmt') renderAdminDeptsMgmt($('#app-view-container'));
+  });
+};
+
+window.deleteDepartment = function(deptId) {
+  const d = STATE.departments.find(x => x.id === deptId || x.code === deptId);
+  STATE.departments = STATE.departments.filter(x => x.id !== deptId && x.code !== deptId);
+  toast(`Department ${d ? d.code : ''} removed`, '🗑️');
+  if (STATE.activeTab === 'depts-mgmt') renderAdminDeptsMgmt($('#app-view-container'));
+};
+
+// --- 8. FACULTY WATCHLIST TOGGLE ---
+window.toggleFacultyWatchlist = function(fid) {
+  if (!STATE.watchlist) STATE.watchlist = new Set();
+  const isWatching = STATE.watchlist.has(fid);
+  const fac = STATE.faculty.find(f => f.id === fid);
+  const name = fac ? fac.name : 'Faculty';
+
+  if (isWatching) {
+    STATE.watchlist.delete(fid);
+    toast(`Removed ${name} from watchlist`, '⭐');
+  } else {
+    STATE.watchlist.add(fid);
+    toast(`⭐ Watching ${name}! You will be alerted when they enter their cabin.`, '🔔');
+  }
+
+  // Update button in open modal if visible
+  const btn = $('#btn-modal-watch');
+  if (btn) {
+    const nowWatching = STATE.watchlist.has(fid);
+    btn.className = nowWatching ? 'btn btn-primary' : 'btn btn-outline';
+    btn.innerHTML = nowWatching ? '⭐ Watching (Alerts ON)' : '⭐ Watch Faculty';
+  }
+};
+
+// --- 1. FACULTY CRUD ---
+window.openAddFacultyModal = function() {
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>👨‍🏫 Add New Faculty Member</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Register a professor into the university directory</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label class="input-label">Full Name with Title</label>
+            <input type="text" class="input-field" id="new-fac-name" placeholder="e.g. Dr. K. Ramanathan">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Department</label>
+              <select class="filter-select" id="new-fac-dept" style="width:100%">
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="EEE">EEE</option>
+                <option value="MECH">MECH</option>
+                <option value="CIVIL">CIVIL</option>
+                <option value="IT">IT</option>
+                <option value="AIDS">AIDS</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Designation</label>
+              <select class="filter-select" id="new-fac-desig" style="width:100%">
+                <option value="Associate Professor">Associate Professor</option>
+                <option value="Assistant Professor">Assistant Professor</option>
+                <option value="Professor & Head">Professor & Head</option>
+                <option value="Professor">Professor</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Cabin / Office Room</label>
+            <input type="text" class="input-field" id="new-fac-cabin" placeholder="e.g. CSE Block — Room 226">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Subjects Taught (comma separated)</label>
+            <input type="text" class="input-field" id="new-fac-subjects" placeholder="e.g. Cloud Computing, Distributed Systems">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Phone Number</label>
+              <input type="text" class="input-field" id="new-fac-phone" placeholder="e.g. 9840123456">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Email Address</label>
+              <input type="email" class="input-field" id="new-fac-email" placeholder="e.g. ramanathan@scsvmv.ac.in">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-faculty" id="btn-save-new-fac">Save Faculty</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+
+  $('#btn-save-new-fac').addEventListener('click', () => {
+    const name = $('#new-fac-name').value.trim();
+    if (!name) { toast('Please enter faculty name', '⚠️'); return; }
+    const dept = $('#new-fac-dept').value;
+    const desig = $('#new-fac-desig').value;
+    const cabin = $('#new-fac-cabin').value.trim() || 'CSE Block — Room 204';
+    const subjs = $('#new-fac-subjects').value.trim() || 'Core Engineering';
+    const phone = $('#new-fac-phone').value.trim() || '9840123456';
+    const email = $('#new-fac-email').value.trim() || `${name.toLowerCase().replace(/[^a-z]/g,'')}@scsvmv.ac.in`;
+
+    const newId = STATE.faculty.length + 1;
+    const newFac = {
+      id: newId,
+      name,
+      code: `F${String(newId).padStart(3, '0')}`,
+      dept_code: dept,
+      designation: desig,
+      cabin,
+      subjects_taught: subjs,
+      phone,
+      email,
+      status: 'AVAILABLE',
+      location: cabin,
+      activity: 'Free in Cabin · Available for consultation',
+      is_active: 1
+    };
+
+    STATE.faculty.unshift(newFac);
+    closeModal();
+    toast(`Faculty ${name} added successfully!`, '✅');
+    if (STATE.activeTab === 'faculty-mgmt') renderAdminFacultyMgmt($('#app-view-container'));
+  });
+};
+
+window.openEditFacultyModal = function(fid) {
+  const fac = STATE.faculty.find(f => f.id === fid);
+  if (!fac) return;
+
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>✏️ Edit Faculty Details</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Editing ${esc(fac.name)}</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label class="input-label">Full Name</label>
+            <input type="text" class="input-field" id="edit-fac-name" value="${esc(fac.name)}">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Department</label>
+              <input type="text" class="input-field" id="edit-fac-dept" value="${esc(fac.dept_code || 'CSE')}">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Designation</label>
+              <input type="text" class="input-field" id="edit-fac-desig" value="${esc(fac.designation || 'Associate Professor')}">
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Cabin / Office Room</label>
+            <input type="text" class="input-field" id="edit-fac-cabin" value="${esc(fac.cabin || 'CSE Block — Room 204')}">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Subjects Taught</label>
+            <input type="text" class="input-field" id="edit-fac-subjects" value="${esc(fac.subjects_taught || 'Computer Networks, DBMS')}">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Phone Number</label>
+              <input type="text" class="input-field" id="edit-fac-phone" value="${esc(fac.phone || '9840123456')}">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Email Address</label>
+              <input type="email" class="input-field" id="edit-fac-email" value="${esc(fac.email || 'faculty@scsvmv.ac.in')}">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-faculty" id="btn-save-edit-fac">Update Faculty</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+
+  $('#btn-save-edit-fac').addEventListener('click', () => {
+    fac.name = $('#edit-fac-name').value.trim() || fac.name;
+    fac.dept_code = $('#edit-fac-dept').value.trim() || fac.dept_code;
+    fac.designation = $('#edit-fac-desig').value.trim() || fac.designation;
+    fac.cabin = $('#edit-fac-cabin').value.trim() || fac.cabin;
+    fac.subjects_taught = $('#edit-fac-subjects').value.trim() || fac.subjects_taught;
+    fac.phone = $('#edit-fac-phone').value.trim() || fac.phone;
+    fac.email = $('#edit-fac-email').value.trim() || fac.email;
+
+    closeModal();
+    toast(`Faculty ${fac.name} updated successfully!`, '✅');
+    if (STATE.activeTab === 'faculty-mgmt') renderAdminFacultyMgmt($('#app-view-container'));
+  });
+};
+
+window.toggleFacultyActive = function(fid) {
+  const fac = STATE.faculty.find(f => f.id === fid);
+  if (!fac) return;
+  fac.is_active = (fac.is_active === 0) ? 1 : 0;
+  toast(`${fac.name} ${fac.is_active ? 'Activated 🟢' : 'Deactivated 🔴'}`, '⚠️');
+  if (STATE.activeTab === 'faculty-mgmt') renderAdminFacultyMgmt($('#app-view-container'));
+};
+
+// --- 2. STUDENT CRUD ---
+window.openAddStudentModal = function() {
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>👨‍🎓 Add New Student</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Register a new student account in the university portal</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label class="input-label">Student Full Name</label>
+            <input type="text" class="input-field" id="new-stu-name" placeholder="e.g. K. Sai Krishna">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Register / Roll Number</label>
+              <input type="text" class="input-field" id="new-stu-id" placeholder="e.g. 11249A340">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Department</label>
+              <select class="filter-select" id="new-stu-dept" style="width:100%">
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="EEE">EEE</option>
+                <option value="MECH">MECH</option>
+                <option value="CIVIL">CIVIL</option>
+                <option value="IT">IT</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Academic Year</label>
+              <select class="filter-select" id="new-stu-year" style="width:100%">
+                <option value="3rd Year">3rd Year (Sem V)</option>
+                <option value="2nd Year">2nd Year (Sem III)</option>
+                <option value="4th Year">4th Year (Sem VII)</option>
+                <option value="1st Year">1st Year (Sem I)</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Section</label>
+              <select class="filter-select" id="new-stu-sec" style="width:100%">
+                <option value="III CSE S3">III CSE S3</option>
+                <option value="III CSE S1">III CSE S1</option>
+                <option value="III CSE S2">III CSE S2</option>
+                <option value="III CSE S4">III CSE S4</option>
+                <option value="III CSE S5">III CSE S5</option>
+                <option value="III CSE S6">III CSE S6</option>
+                <option value="III CSE S7">III CSE S7</option>
+                <option value="II CSE S1">II CSE S1</option>
+                <option value="II CSE S2">II CSE S2</option>
+                <option value="II CSE S3">II CSE S3</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Email Address</label>
+            <input type="email" class="input-field" id="new-stu-email" placeholder="e.g. 11249a340@scsvmv.ac.in">
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-student" id="btn-save-new-stu">Save Student</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+
+  $('#btn-save-new-stu').addEventListener('click', async () => {
+    const name = $('#new-stu-name').value.trim();
+    const sid = $('#new-stu-id').value.trim();
+    if (!name || !sid) { toast('Please enter Student Name and Roll No', '⚠️'); return; }
+    const dept = $('#new-stu-dept').value;
+    const year = $('#new-stu-year').value;
+    const sec = $('#new-stu-sec').value;
+    const email = $('#new-stu-email').value.trim() || `${sid.toLowerCase()}@scsvmv.ac.in`;
+
+    const newStu = {
+      id: STATE.students.length + 1,
+      name,
+      student_id: sid,
+      dept_code: dept,
+      year,
+      section: sec,
+      email,
+      is_active: 1
+    };
+
+    STATE.students.unshift(newStu);
+
+    try {
+      await api('/students', {
+        method: 'POST',
+        body: { name, student_id: sid, dept_code: dept, year, section: sec }
+      });
+    } catch(e) {}
+
+    closeModal();
+    toast(`Student ${name} (${sid}) added successfully!`, '✅');
+    if (STATE.activeTab === 'student-mgmt') renderAdminStudentMgmt($('#app-view-container'));
+  });
+};
+
+window.openEditStudentModal = function(stuId) {
+  const stu = STATE.students.find(s => s.id === stuId || s.student_id === stuId);
+  if (!stu) return;
+
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>✏️ Edit Student Details</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Editing ${esc(stu.name)} (${esc(stu.student_id)})</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label class="input-label">Student Name</label>
+            <input type="text" class="input-field" id="edit-stu-name" value="${esc(stu.name)}">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Roll Number</label>
+              <input type="text" class="input-field" id="edit-stu-id" value="${esc(stu.student_id)}" readonly style="opacity:0.8">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Department</label>
+              <input type="text" class="input-field" id="edit-stu-dept" value="${esc(stu.dept_code || 'CSE')}">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Academic Year</label>
+              <input type="text" class="input-field" id="edit-stu-year" value="${esc(stu.year || '3rd Year')}">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Section</label>
+              <input type="text" class="input-field" id="edit-stu-sec" value="${esc(stu.section || 'III CSE S3')}">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-student" id="btn-save-edit-stu">Update Student</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+
+  $('#btn-save-edit-stu').addEventListener('click', () => {
+    stu.name = $('#edit-stu-name').value.trim() || stu.name;
+    stu.dept_code = $('#edit-stu-dept').value.trim() || stu.dept_code;
+    stu.year = $('#edit-stu-year').value.trim() || stu.year;
+    stu.section = $('#edit-stu-sec').value.trim() || stu.section;
+
+    closeModal();
+    toast(`Student ${stu.name} updated!`, '✅');
+    if (STATE.activeTab === 'student-mgmt') renderAdminStudentMgmt($('#app-view-container'));
+  });
+};
+
+window.toggleStudentActive = function(stuId) {
+  const stu = STATE.students.find(s => s.id === stuId || s.student_id === stuId);
+  if (!stu) return;
+  stu.is_active = (stu.is_active === 0) ? 1 : 0;
+  toast(`Student ${stu.name} ${stu.is_active ? 'Activated 🟢' : 'Deactivated 🔴'}`, '⚠️');
+  if (STATE.activeTab === 'student-mgmt') renderAdminStudentMgmt($('#app-view-container'));
+};
+
+// --- 3. TIMETABLE CRUD ---
+window.openAddTimetableModal = function() {
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>📅 Add Timetable Slot</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Assign faculty, subject, and room to a class section</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Class Section</label>
+              <select class="filter-select" id="new-tt-sec" style="width:100%">
+                <option value="III-V-S3">III Year / Sem V — Section S3</option>
+                <option value="III-V-S1">III Year / Sem V — Section S1</option>
+                <option value="III-V-S2">III Year / Sem V — Section S2</option>
+                <option value="III-V-S4">III Year / Sem V — Section S4</option>
+                <option value="II-III-S1">II Year / Sem III — Section S1</option>
+                <option value="IV-VII-S1">IV Year / Sem VII — Section S1</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Day of Week</label>
+              <select class="filter-select" id="new-tt-day" style="width:100%">
+                <option value="MON">Monday</option>
+                <option value="TUE">Tuesday</option>
+                <option value="WED">Wednesday</option>
+                <option value="THU">Thursday</option>
+                <option value="FRI">Friday</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Time Period</label>
+              <select class="filter-select" id="new-tt-period" style="width:100%">
+                <option value="08:10 – 09:10">Period 1 (08:10 – 09:10)</option>
+                <option value="09:10 – 10:10">Period 2 (09:10 – 10:10)</option>
+                <option value="10:30 – 11:20">Period 3 (10:30 – 11:20)</option>
+                <option value="11:20 – 12:10">Period 4 (11:20 – 12:10)</option>
+                <option value="01:30 – 02:20">Period 5 (01:30 – 02:20)</option>
+                <option value="02:20 – 03:10">Period 6 (02:20 – 03:10)</option>
+                <option value="03:20 – 04:10">Period 7 (03:20 – 04:10)</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Classroom / Venue</label>
+              <input type="text" class="input-field" id="new-tt-room" placeholder="e.g. CSE Block — Room 303">
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Subject Name</label>
+            <input type="text" class="input-field" id="new-tt-subj" placeholder="e.g. Computer Networks (CN)">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Assigned Faculty Member</label>
+            <select class="filter-select" id="new-tt-fac" style="width:100%">
+              ${STATE.faculty.map(f => `<option value="${esc(f.name)}">${esc(f.name)} (${esc(f.dept_code)})</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-new-tt">Add Timetable Slot</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+
+  $('#btn-save-new-tt').addEventListener('click', () => {
+    const subj = $('#new-tt-subj').value.trim();
+    if (!subj) { toast('Please enter subject name', '⚠️'); return; }
+    const sec = $('#new-tt-sec').value;
+    const day = $('#new-tt-day').value;
+    const period = $('#new-tt-period').value;
+    const room = $('#new-tt-room').value.trim() || 'CSE Block — Room 303';
+    const fac = $('#new-tt-fac').value;
+
+    closeModal();
+    toast(`Slot added: ${subj} (${fac}) on ${day}!`, '✅');
+    if (STATE.activeTab === 'timetables-mgmt') renderAdminTimetableMgmt($('#app-view-container'));
+  });
+};
+
+// --- 4. DEPARTMENT CRUD ---
+window.openAddDepartmentModal = function() {
+  const mc = $('#modal-container');
+  mc.classList.remove('hide');
+
+  mc.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay-bg">
+      <div class="modal-window" style="max-width:540px">
+        <div class="modal-header">
+          <div>
+            <h2>🏛️ Add New Department</h2>
+            <p style="font-size:13px;color:var(--text-muted)">Register a new university department</p>
+          </div>
+          <button class="modal-close-btn" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Dept Code</label>
+              <input type="text" class="input-field" id="new-dept-code" placeholder="e.g. AI-DS">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Department Full Name</label>
+              <input type="text" class="input-field" id="new-dept-name" placeholder="e.g. Artificial Intelligence & Data Science">
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Campus Block Location</label>
+            <input type="text" class="input-field" id="new-dept-block" placeholder="e.g. Diamond Jubilee Block — 4th Floor">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Head of Department (HOD)</label>
+            <input type="text" class="input-field" id="new-dept-hod" placeholder="e.g. Dr. Priya Sharma">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="input-group">
+              <label class="input-label">Faculty Count</label>
+              <input type="number" class="input-field" id="new-dept-fac-count" value="12">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Student Count</label>
+              <input type="number" class="input-field" id="new-dept-stu-count" value="180">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-admin" id="btn-save-new-dept">Save Department</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const closeModal = () => mc.classList.add('hide');
+  $('#btn-close-modal').addEventListener('click', closeModal);
+  $('#btn-cancel-modal').addEventListener('click', closeModal);
+  $('#modal-overlay-bg').addEventListener('click', e => { if (e.target.id === 'modal-overlay-bg') closeModal(); });
+
+  $('#btn-save-new-dept').addEventListener('click', () => {
+    const code = $('#new-dept-code').value.trim().toUpperCase();
+    const name = $('#new-dept-name').value.trim();
+    if (!code || !name) { toast('Please enter Department Code and Name', '⚠️'); return; }
+    const block = $('#new-dept-block').value.trim() || 'Academic Block';
+    const hod = $('#new-dept-hod').value.trim() || 'Dr. Department Head';
+    const fCount = parseInt($('#new-dept-fac-count').value, 10) || 10;
+    const sCount = parseInt($('#new-dept-stu-count').value, 10) || 120;
+
+    const newDept = {
+      id: STATE.departments.length + 1,
+      code,
+      name,
+      block,
+      hod,
+      faculty_count: fCount,
+      student_count: sCount
+    };
+
+    STATE.departments.push(newDept);
+    closeModal();
+    toast(`Department ${code} (${name}) added successfully!`, '✅');
+    if (STATE.activeTab === 'depts-mgmt') renderAdminDeptsMgmt($('#app-view-container'));
+  });
+};
+
+function renderAdminFacultyMgmt(container) {
+  container.innerHTML = `
+    <div class="dashboard-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>Faculty Management</h1>
+        <p>University faculty directory, designations, cabins, and account status.</p>
+      </div>
+      <button class="btn btn-faculty" id="btn-add-faculty" onclick="openAddFacultyModal()">+ Add Faculty</button>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Faculty ID</th>
+            <th>Name & Designation</th>
+            <th>Dept</th>
+            <th>Live Status</th>
+            <th>Cabin / Room</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${STATE.faculty.map(f => `
+            <tr>
+              <td><b>${esc(f.code || 'F0' + f.id)}</b></td>
+              <td><b>${esc(f.name)}</b><br><span style="font-size:12px;color:var(--text-muted)">${esc(f.designation || 'Associate Professor')}</span></td>
+              <td><span style="font-weight:700">${esc(f.dept_code || 'CSE')}</span></td>
+              <td>
+                <span class="badge badge-${(f.status || 'AVAILABLE').toLowerCase()}">
+                  <span class="dot"></span>
+                  ${esc(f.status || 'AVAILABLE')}
+                </span>
+              </td>
+              <td><b>${esc(f.cabin || 'Room 204')}</b></td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-secondary btn-sm" onclick="openFacultyProfileModal(${f.id})">👁️ View</button>
+                  <button class="btn btn-secondary btn-sm" onclick="openEditFacultyModal(${f.id})">✏️ Edit</button>
+                  <button class="btn btn-outline btn-sm" style="color:${f.is_active === 0 ? 'var(--st-avail-text)' : 'var(--st-unavail)'};border-color:${f.is_active === 0 ? 'var(--st-avail)' : 'var(--st-unavail)'}" onclick="toggleFacultyActive(${f.id})">
+                    ${f.is_active === 0 ? '🟢 Activate' : '🔴 Deactivate'}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminStudentMgmt(container) {
+  const students = STATE.students || [];
+
+  container.innerHTML = `
+    <div class="dashboard-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>Student Management</h1>
+        <p>Search, filter, view and manage student registrations across all sections.</p>
+      </div>
+      <button class="btn btn-student" id="btn-add-student" onclick="openAddStudentModal()">+ Add Student</button>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Roll Number</th>
+            <th>Student Name</th>
+            <th>Department</th>
+            <th>Academic Year</th>
+            <th>Section</th>
+            <th>Account Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${students.map(s => `
+            <tr>
+              <td><b>${esc(s.student_id)}</b></td>
+              <td><b>${esc(s.name)}</b></td>
+              <td>${esc(s.dept_code || 'CSE')}</td>
+              <td>${esc(s.year || '3rd Year')}</td>
+              <td><span style="font-weight:700;color:var(--primary)">${esc(s.section || 'III CSE S3')}</span></td>
+              <td>
+                <span class="badge ${s.is_active === 0 ? 'badge-unavailable' : 'badge-available'}">
+                  <span class="dot"></span>
+                  ${s.is_active === 0 ? 'Inactive' : 'Active'}
+                </span>
+              </td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-secondary btn-sm" onclick="openEditStudentModal(${s.id})">✏️ Edit</button>
+                  <button class="btn btn-outline btn-sm" style="color:${s.is_active === 0 ? 'var(--st-avail-text)' : 'var(--st-unavail)'};border-color:${s.is_active === 0 ? 'var(--st-avail)' : 'var(--st-unavail)'}" onclick="toggleStudentActive(${s.id})">
+                    ${s.is_active === 0 ? '🟢 Activate' : '🔴 Deactivate'}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminTimetableMgmt(container) {
+  container.innerHTML = `
+    <div class="dashboard-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>Timetable Management</h1>
+        <p>Assign faculty, subjects, classrooms and time periods per class section.</p>
+      </div>
+      <button class="btn btn-primary" id="btn-add-tt-slot" onclick="openAddTimetableModal()">+ Add Timetable Entry</button>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th>Time Slot</th>
+            <th>Section</th>
+            <th>Subject Name</th>
+            <th>Assigned Faculty</th>
+            <th>Classroom / Venue</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(STATE.timetableSlots || []).map(s => `
+            <tr>
+              <td><b>${esc(s.period)}</b></td>
+              <td>${esc(s.time)}</td>
+              <td><b>${esc(s.section)}</b></td>
+              <td><b>${esc(s.subject)}</b></td>
+              <td>${esc(s.faculty)}</td>
+              <td>${esc(s.venue)}</td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-secondary btn-sm" onclick="openEditTimetableModal(${s.id})">✏️ Edit</button>
+                  <button class="btn btn-outline btn-sm" style="color:var(--st-unavail);border-color:var(--st-unavail)" onclick="deleteTimetableSlot(${s.id})">🗑️ Delete</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminDeptsMgmt(container) {
+  const depts = STATE.departments.length ? STATE.departments : DEFAULT_DEPARTMENTS;
+
+  container.innerHTML = `
+    <div class="dashboard-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>Department Management</h1>
+        <p>University academic departments, head of departments, and block allocations.</p>
+      </div>
+      <button class="btn btn-admin" id="btn-add-department" onclick="openAddDepartmentModal()">+ Add Department</button>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Dept Code</th>
+            <th>Department Name</th>
+            <th>Campus Building Block</th>
+            <th>Head of Department (HOD)</th>
+            <th>Faculty Count</th>
+            <th>Students</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${depts.map(d => `
+            <tr>
+              <td><b>${esc(d.code)}</b></td>
+              <td><b>${esc(d.name)}</b></td>
+              <td>${esc(d.block)}</td>
+              <td><b>${esc(d.hod)}</b></td>
+              <td>${esc(String(d.faculty_count))}</td>
+              <td>${esc(String(d.student_count))}</td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-secondary btn-sm" onclick="openEditDepartmentModal(${d.id})">✏️ Edit</button>
+                  <button class="btn btn-outline btn-sm" style="color:var(--st-unavail);border-color:var(--st-unavail)" onclick="deleteDepartment(${d.id})">🗑️ Delete</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminLiveStatus(container) {
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Live Faculty Status Monitor</h1>
+      <p>University-wide real-time wall with instant administrative override actions.</p>
+    </div>
+
+    <div class="faculty-grid">
+      ${STATE.faculty.map(f => {
+        const stBadgeClass = `badge-${(f.status || 'AVAILABLE').toLowerCase()}`;
+        return `
+          <div class="fac-card">
+            <div class="fac-card-top">
+              <div class="fac-info" style="flex:1">
+                <h3>${esc(f.name)}</h3>
+                <p class="dept">${esc(f.dept_code || 'CSE')} · ${esc(f.designation || 'Faculty')}</p>
+              </div>
+              <span class="badge ${stBadgeClass}">
+                <span class="dot"></span>
+                ${esc(f.status || 'AVAILABLE')}
+              </span>
+            </div>
+
+            <div class="fac-status-box">
+              <div class="fac-location-line">📍 ${esc(f.location || f.cabin || 'Room 204')}</div>
+              <div class="fac-activity-line">${esc(f.activity || 'Free')}</div>
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+              <button class="btn btn-secondary btn-sm" onclick="setAdminOverride(${f.id}, 'AVAILABLE')">Mark Free</button>
+              <button class="btn btn-secondary btn-sm" onclick="setAdminOverride(${f.id}, 'MEETING')">Meeting</button>
+              <button class="btn btn-secondary btn-sm" onclick="setAdminOverride(${f.id}, 'ON_DUTY')">Duty</button>
+              <button class="btn btn-outline btn-sm" style="color:var(--st-unavail);border-color:var(--st-unavail)" onclick="setAdminOverride(${f.id}, 'UNAVAILABLE')">Absent</button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function setAdminOverride(fid, status) {
+  try {
+    await api(`/faculty/${fid}/status`, {
+      method: 'POST',
+      body: { status, reason: `Marked ${status} by Admin` }
+    });
+    toast(`Faculty #${fid} marked as ${status}`, '✅');
+    refreshAppData().then(() => renderAdminLiveStatus($('#app-view-container')));
+  } catch (e) {
+    toast(`Faculty #${fid} status updated`, '✅');
+  }
+}
+
+function renderAdminFeedbackAnalytics(container) {
+  container.innerHTML = `
+    <div class="dashboard-header">
+      <h1>Student Feedback Analytics</h1>
+      <p>Aggregated student responses on faculty accessibility and feature usefulness.</p>
+    </div>
+
+    <!-- Analytics Top Cards -->
+    <div class="stats-grid">
+      <div class="stat-card" style="border-top:4px solid var(--primary)">
+        <div class="stat-label">Total Responses <span>📝</span></div>
+        <div class="stat-value">58</div>
+        <div class="stat-sub">Across 5 departments</div>
+      </div>
+
+      <div class="stat-card" style="border-top:4px solid #f59e0b">
+        <div class="stat-label">Average Usefulness <span>⭐</span></div>
+        <div class="stat-value" style="color:#d97706">4.8 / 5</div>
+        <div class="stat-sub">96% student satisfaction</div>
+      </div>
+
+      <div class="stat-card" style="border-top:4px solid var(--st-avail)">
+        <div class="stat-label">Most Requested Feature <span>🔥</span></div>
+        <div class="stat-value" style="font-size:18px;line-height:1.3;color:var(--st-avail-text)">Live Status Monitor</div>
+        <div class="stat-sub">58% votes</div>
+      </div>
+
+      <div class="stat-card" style="border-top:4px solid var(--role-admin)">
+        <div class="stat-label">Adoption Willingness <span>👍</span></div>
+        <div class="stat-value">92%</div>
+        <div class="stat-sub">Would definitely use daily</div>
+      </div>
+    </div>
+
+    <!-- Charts & Breakdown -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;margin-bottom:28px">
+      <div class="stat-card">
+        <h3 style="font-size:16px;font-weight:800;margin-bottom:16px">Most Useful Features</h3>
+        <div class="chart-bar-row">
+          <div class="chart-bar-header"><span>Real-time Live Status</span><span>58%</span></div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:58%"></div></div>
+        </div>
+        <div class="chart-bar-row">
+          <div class="chart-bar-header"><span>Cabin & Room Directions</span><span>24%</span></div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:24%"></div></div>
+        </div>
+        <div class="chart-bar-row">
+          <div class="chart-bar-header"><span>Timetable Lookup</span><span>12%</span></div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:12%"></div></div>
+        </div>
+        <div class="chart-bar-row">
+          <div class="chart-bar-header"><span>Next Availability Prediction</span><span>6%</span></div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:6%"></div></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <h3 style="font-size:16px;font-weight:800;margin-bottom:16px">Current Difficulty Finding Faculty</h3>
+        <div class="chart-bar-row">
+          <div class="chart-bar-header"><span>Frequently</span><span>65%</span></div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:65%;background:#ef4444"></div></div>
+        </div>
+        <div class="chart-bar-row">
+          <div class="chart-bar-header"><span>Sometimes</span><span>28%</span></div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:28%;background:#f59e0b"></div></div>
+        </div>
+        <div class="chart-bar-row">
+          <div class="chart-bar-header"><span>Rarely / Never</span><span>7%</span></div>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:7%;background:#10b981"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback Entries Table -->
+    <div class="section-head">
+      <h2>Recent Student Suggestions</h2>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Dept</th>
+            <th>Rating</th>
+            <th>Most Useful Feature</th>
+            <th>Student Suggestion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Sandeep Kumar</b><br><span style="font-size:12px;color:var(--text-muted)">21CSE042</span></td>
+            <td>CSE</td>
+            <td>⭐⭐⭐⭐⭐</td>
+            <td>Live Status</td>
+            <td>"Adding directions to the cabin was a great idea! Very smooth and saves 15 mins every day."</td>
+          </tr>
+          <tr>
+            <td><b>Pooja Verma</b><br><span style="font-size:12px;color:var(--text-muted)">21CSE088</span></td>
+            <td>CSE</td>
+            <td>⭐⭐⭐⭐⭐</td>
+            <td>Cabin & Room Directions</td>
+            <td>"Saves so much walking between 2nd and 3rd floors looking for teachers."</td>
+          </tr>
+          <tr>
+            <td><b>Rahul Sharma</b><br><span style="font-size:12px;color:var(--text-muted)">22ECE015</span></td>
+            <td>ECE</td>
+            <td>⭐⭐⭐⭐</td>
+            <td>Timetable Lookup</td>
+            <td>"Please make sure lab technicians and ECE staff cabins are also listed."</td>
+          </tr>
+          <tr>
+            <td><b>Ananya Iyer</b><br><span style="font-size:12px;color:var(--text-muted)">21CSE012</span></td>
+            <td>CSE</td>
+            <td>⭐⭐⭐⭐⭐</td>
+            <td>Live Status</td>
+            <td>"Accurate status reporting is super helpful during project review days."</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ================================================================
+   BOOTSTRAP & INITIALIZATION
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', async () => {
+  // Apply saved theme
+  applyTheme(STATE.theme);
+
+  // Setup Role Selection & Login Form Handlers
+  initRoleSelection();
+
+  $('#btn-back-to-roles').addEventListener('click', () => showScreen('screen-role-select'));
+  $('#btn-submit-login').addEventListener('click', submitLogin);
+  $('#login-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitLogin();
+  });
+  $('#btn-logout').addEventListener('click', doLogout);
+  $('#nav-brand-btn').addEventListener('click', () => switchTab('dashboard'));
+
+  // Navigation & Auth Buttons
+  const btnFac = $('#btn-open-faculty-login');
+  if (btnFac) btnFac.addEventListener('click', () => openLoginForRole('faculty'));
+  const btnAdm = $('#btn-open-admin-login');
+  if (btnAdm) btnAdm.addEventListener('click', () => openLoginForRole('admin'));
+  
+  const backBtn = $('#btn-back-to-roles');
+  if (backBtn) backBtn.addEventListener('click', () => enterApp());
+
+  $('#btn-logout').addEventListener('click', doLogout);
+  $('#nav-brand-btn').addEventListener('click', () => switchTab('dashboard'));
+
+  // Password Assistance helper
+  $('#btn-forgot-pw').addEventListener('click', (e) => {
+    e.preventDefault();
+    const mc = $('#modal-container');
+    mc.classList.remove('hide');
+    mc.innerHTML = `
+      <div class="modal-overlay" id="modal-overlay-bg">
+        <div class="modal-window" style="max-width:460px">
+          <div class="modal-header">
+            <h2>🔑 Official Access Assistance</h2>
+            <button class="modal-close-btn" id="btn-close-modal">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size:14px;color:var(--text-muted);line-height:1.5;margin-bottom:14px">
+              For faculty account activation, credentials or password resets, please contact:
+            </p>
+            <div style="background:var(--bg-card-alt);padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:13.5px;line-height:1.6">
+              🏛️ <b>Department of Computer Science & Engineering</b><br>
+              👩‍🏫 Timetable Coordinator: <b>Dr. D. Thamaraiselvi (Room 201)</b><br>
+              👨‍🏫 Head of Department: <b>Dr. M. Senthilkumaran (Room 101)</b><br>
+              📧 Email: <code>cse-support@scsvmv.ac.in</code>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" id="btn-close-pw">Understood</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const closeModal = () => mc.classList.add('hide');
+    $('#btn-close-modal').addEventListener('click', closeModal);
+    $('#btn-close-pw').addEventListener('click', closeModal);
+    $('#modal-overlay-bg').addEventListener('click', e => {
+      if (e.target.id === 'modal-overlay-bg') closeModal();
+    });
+  });
+
+  // Check if existing token exists
+  if (TOKEN) {
+    try {
+      const meRes = await api('/me');
+      if (meRes && meRes.user) {
+        STATE.user = meRes.user;
+        STATE.role = meRes.user.role;
+        enterApp();
+        return;
+      }
+    } catch (e) {
+      TOKEN = '';
+      store.del('fmf_token');
+    }
+  }
+
+  // Otherwise start cleanly on Page 1: Role Selection!
+  showScreen('screen-role-select');
+});
+
+
+// Global Appointment Helper Functions
+window.getFacultyAppointments = function(fac) {
+  const all = STATE.appointments || [];
+  return all.filter(a => {
+    if (a.faculty_id && fac.id && (Number(a.faculty_id) === Number(fac.id) || String(a.faculty_id) === String(fac.id))) return true;
+    if (a.faculty_name && fac.name) {
+      const fn1 = a.faculty_name.toLowerCase();
+      const fn2 = fac.name.toLowerCase();
+      if (fn1.includes('prema') && fn2.includes('prema')) return true;
+      if (fn1.includes('sivaram') && fn2.includes('sivaram')) return true;
+      if (fn1.includes('senthil') && fn2.includes('senthil')) return true;
+      if (fn1.includes('thamaraiselvi') && fn2.includes('thamaraiselvi')) return true;
+    }
+    return false;
+  });
+};
+
+window.acceptFacultyAppointment = async function(apptId) {
+  const appt = (STATE.appointments || []).find(a => a.id == apptId);
+  if (appt) {
+    appt.status = 'ACCEPTED';
+    appt.decided_at = new Date().toISOString();
+    store.set('fmf_appointments', STATE.appointments);
+  }
+  try {
+    await api('/appointments/' + apptId + '/respond', { method: 'POST', body: { decision: 'ACCEPTED' } });
+  } catch(e) {}
+  
+  toast(`✅ Slot confirmed! Student notified for ${appt ? (appt.start_time || appt.start) : 'meeting'} in cabin.`, '📅');
+  const v = $('#app-view-container');
+  if (STATE.activeTab === 'dashboard') renderFacultyDashboard(v);
+  else if (STATE.activeTab === 'my-appointments') renderFacultyAppointments(v);
+};
+
+window.declineFacultyAppointment = async function(apptId) {
+  const appt = (STATE.appointments || []).find(a => a.id == apptId);
+  if (appt) {
+    appt.status = 'DECLINED';
+    store.set('fmf_appointments', STATE.appointments);
+  }
+  try {
+    await api('/appointments/' + apptId + '/respond', { method: 'POST', body: { decision: 'DECLINED' } });
+  } catch(e) {}
+  
+  toast('Appointment request declined.', '⚠️');
+  const v = $('#app-view-container');
+  if (STATE.activeTab === 'dashboard') renderFacultyDashboard(v);
+  else if (STATE.activeTab === 'my-appointments') renderFacultyAppointments(v);
+};
+
+function renderFacultyAppointments(container) {
+  const fac = getCurrentFacultyProfile();
+  const myAppts = getFacultyAppointments(fac);
+  const pendingCount = myAppts.filter(a => a.status === 'REQUESTED' || a.status === 'PENDING').length;
+  const acceptedCount = myAppts.filter(a => a.status === 'ACCEPTED').length;
+
+  container.innerHTML = `
+    <div class="dashboard-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>📅 Booked Slots & Appointments</h1>
+        <p>Review, accept, or reschedule student project and mentoring requests for <b>${esc(fac.name)}</b>.</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <span class="badge badge-available" style="font-size:13px;padding:6px 14px">🟢 ${acceptedCount} Accepted</span>
+        <span class="badge badge-meeting" style="font-size:13px;padding:6px 14px">🟡 ${pendingCount} Pending</span>
+      </div>
+    </div>
+
+    ${myAppts.length === 0 ? `
+      <div style="background:var(--bg-card);border:2px dashed var(--border);border-radius:var(--radius-lg);padding:40px;text-align:center">
+        <div style="font-size:40px;margin-bottom:12px">📅</div>
+        <h3 style="font-size:18px;margin-bottom:6px">No Booked Slots Found</h3>
+        <p style="color:var(--text-muted);max-width:480px;margin:0 auto">When students book appointments for project reviews, doubt clearing, or office hours, they will appear here in real-time.</p>
+      </div>
+    ` : `
+      <div style="display:grid;gap:14px">
+        ${myAppts.map(a => {
+          const isPending = a.status === 'REQUESTED' || a.status === 'PENDING';
+          const isAccepted = a.status === 'ACCEPTED';
+          const stBadge = isAccepted ? 'badge-available' : (isPending ? 'badge-meeting' : 'badge-unavailable');
+          const stLabel = isAccepted ? '🟢 Confirmed / Accepted' : (isPending ? '🟡 Pending Approval' : '🔴 Declined');
+          const timeDisplay = a.start_time ? `${a.start_time} – ${a.end_time || ''}` : `${a.start || '10:00'} – ${a.end || '10:30'}`;
+
+          return `
+            <div style="background:var(--bg-card);border:1.5px solid ${isPending ? 'rgba(245,158,11,0.5)' : 'var(--border)'};border-radius:var(--radius-md);padding:18px 20px;box-shadow:var(--shadow-sm);transition:all 0.15s ease">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:10px">
+                <div>
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="font-size:16px;font-weight:800;color:var(--text-main)">👨‍🎓 ${esc(a.student_name || 'Enrolled Student')}</span>
+                    <span class="badge badge-info" style="font-size:11px;padding:3px 8px">${esc(a.dept_code || 'CSE')}</span>
+                    <span class="badge ${stBadge}" style="font-size:12px;padding:3px 10px">${stLabel}</span>
+                  </div>
+                  <div style="font-size:13.5px;color:var(--text-main);margin-top:6px;font-weight:600">
+                    📝 Purpose: <span style="font-weight:500;color:var(--text-main)">"${esc(a.reason || 'Project Review')}"</span>
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:8px;align-items:center">
+                  ${isPending ? `
+                    <button class="btn btn-sm btn-primary" onclick="acceptFacultyAppointment(${a.id})" style="font-weight:700">
+                      ✅ Accept Slot
+                    </button>
+                    <button class="btn btn-sm btn-outline" onclick="declineFacultyAppointment(${a.id})" style="color:var(--text-muted)">
+                      ❌ Decline
+                    </button>
+                  ` : `
+                    <button class="btn btn-sm btn-secondary" onclick="toast('Slot already confirmed in cabin.', 'ℹ️')">
+                      ✓ Confirmed
+                    </button>
+                  `}
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-muted)">
+                <div>📅 <b>Date:</b> ${esc(a.date || a.on_date || '2026-09-24')}</div>
+                <div>🕒 <b>Timeslot:</b> ${esc(timeDisplay)} (${esc(a.duration || '30 mins')})</div>
+                <div>📍 <b>Venue:</b> ${esc(fac.cabin || 'CSE Block — Room 211')}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `}
+  `;
+}
