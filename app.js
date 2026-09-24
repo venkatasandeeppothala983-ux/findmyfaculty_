@@ -834,9 +834,23 @@ function getDynamicFacultyList() {
   });
 }
 
+function loadStoreJson(key, fallback) {
+  try {
+    const raw = store.get(key);
+    if (raw == null || raw === '' || raw === '[object Object]') {
+      if (raw === '[object Object]') store.del(key);
+      return fallback;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    store.del(key);
+    return fallback;
+  }
+}
+
 const STATE = {
   simDaytime: false,
-  statusOverrides: JSON.parse(store.get('fmf_status_overrides') || '{}'),
+  statusOverrides: loadStoreJson('fmf_status_overrides', {}),
   theme: store.get('fmf_theme') || 'light',
   user: null,
   role: 'student', // 'student' | 'faculty' | 'admin'
@@ -845,7 +859,7 @@ const STATE = {
   faculty: DEFAULT_FACULTY,
   departments: DEFAULT_DEPARTMENTS,
   students: DEFAULT_STUDENTS,
-  appointments: JSON.parse(store.get('fmf_appointments') || JSON.stringify(DEFAULT_APPOINTMENTS)),
+  appointments: loadStoreJson('fmf_appointments', DEFAULT_APPOINTMENTS),
 
   timetableSlots: [
     { id: 1, period: 'Period 1', time: '08:10 – 09:10', section: 'III CSE S3', subject: 'Computer Networks (CN)', faculty: 'Dr. R. Sivaramakrishnan', venue: 'CSE Block — Room 201' },
@@ -854,7 +868,7 @@ const STATE = {
     { id: 4, period: 'Period 4', time: '11:20 – 12:10', section: 'III CSE S3', subject: 'Natural Language Processing (NLP)', faculty: 'Dr. R. Prema', venue: 'CSE Block — Room 201' },
     { id: 5, period: 'Period 5–7', time: '01:30 – 04:10', section: 'III CSE S3', subject: 'CN Lab / DBMS Lab / Java Lab', faculty: 'Dr. R. Sivaramakrishnan & Dr. M. Senthilkumaran', venue: 'Computer Lab - 2 & Lab - 3' }
   ],
-  recentSearches: JSON.parse(store.get('fmf_recent') || '["Dr. Ravi Kumar", "Dr. Priya Sharma", "Dr. V. Geetha"]'),
+  recentSearches: loadStoreJson('fmf_recent', ['Dr. Ravi Kumar', 'Dr. Priya Sharma', 'Dr. V. Geetha']),
   watchlist: new Set(),
   lastUpdated: 'Just now'
 };
@@ -924,7 +938,7 @@ async function api(path, opts = {}) {
   let timeoutId;
   if (typeof AbortController !== 'undefined') {
     const controller = new AbortController();
-    timeoutId = setTimeout(() => controller.abort(), 2500);
+    timeoutId = setTimeout(() => controller.abort(), 15000);
     o.signal = controller.signal;
   }
   
@@ -1061,6 +1075,9 @@ function fallbackApi(path, opts = {}) {
    APPLICATION ROUTING & SCREEN SWITCHER
    ================================================================ */
 function showScreen(screenId) {
+  const mc = $('#modal-container');
+  if (mc) { mc.classList.add('hide'); mc.innerHTML = ''; }
+
   $('#screen-role-select').classList.add('hide');
   $('#screen-role-login').classList.add('hide');
   $('#screen-app').classList.add('hide');
@@ -1383,7 +1400,7 @@ async function refreshAppData() {
           const existingIds = new Set(remoteList.map(a => a.id));
           const localOnly = (STATE.appointments || []).filter(a => !existingIds.has(a.id));
           STATE.appointments = [...remoteList, ...localOnly];
-          store.set('fmf_appointments', STATE.appointments);
+          store.set('fmf_appointments', JSON.stringify(STATE.appointments));
         }
       } catch (err) {}
     }
@@ -2245,7 +2262,7 @@ function openBookSlotModal(fac) {
 
       STATE.appointments = STATE.appointments || [];
       STATE.appointments.unshift(newAppt);
-      store.set('fmf_appointments', STATE.appointments);
+      store.set('fmf_appointments', JSON.stringify(STATE.appointments));
 
       try {
         await api('/appointments', {
@@ -4392,12 +4409,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnFac) btnFac.addEventListener('click', () => openLoginForRole('faculty'));
   const btnAdm = $('#btn-open-admin-login');
   if (btnAdm) btnAdm.addEventListener('click', () => openLoginForRole('admin'));
-  
-  const backBtn = $('#btn-back-to-roles');
-  if (backBtn) backBtn.addEventListener('click', () => enterApp());
-
-  $('#btn-logout').addEventListener('click', doLogout);
-  $('#nav-brand-btn').addEventListener('click', () => switchTab('dashboard'));
 
   // Password Assistance helper
   $('#btn-forgot-pw').addEventListener('click', (e) => {
@@ -4446,6 +4457,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         enterApp();
         return;
       }
+      // Stale/invalid session (incl. fallback { user: null }) — clear and stay on role select
+      TOKEN = '';
+      store.del('fmf_token');
     } catch (e) {
       TOKEN = '';
       store.del('fmf_token');
@@ -4479,7 +4493,7 @@ window.acceptFacultyAppointment = async function(apptId) {
   if (appt) {
     appt.status = 'ACCEPTED';
     appt.decided_at = new Date().toISOString();
-    store.set('fmf_appointments', STATE.appointments);
+    store.set('fmf_appointments', JSON.stringify(STATE.appointments));
   }
   try {
     await api('/appointments/' + apptId + '/respond', { method: 'POST', body: { decision: 'ACCEPTED' } });
@@ -4495,7 +4509,7 @@ window.declineFacultyAppointment = async function(apptId) {
   const appt = (STATE.appointments || []).find(a => a.id == apptId);
   if (appt) {
     appt.status = 'DECLINED';
-    store.set('fmf_appointments', STATE.appointments);
+    store.set('fmf_appointments', JSON.stringify(STATE.appointments));
   }
   try {
     await api('/appointments/' + apptId + '/respond', { method: 'POST', body: { decision: 'DECLINED' } });
